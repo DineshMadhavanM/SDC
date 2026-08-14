@@ -3501,7 +3501,6 @@ end</div>
     requestAnimationFrame(() => initHAFlowCanvas());
   }
 },
-
 // ── AUTHENTICATION & AUTHORIZATION ────────────────────────────
 "auth-authz": {
   title: "Authentication & Authorization",
@@ -3512,15 +3511,25 @@ end</div>
     c.innerHTML = `
       ${hero(this)}
 
-      <div class="section-title">📌 Authentication vs Authorization: The Core Difference</div>
+      <div class="section-title">🔑 Authentication & Authorization — Comprehensive Theory & Architecture</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.05)">
+        <h3 style="color:var(--accent2)">🏢 The Office Building Analogy</h3>
+        <p style="font-size:.88rem;color:var(--text2);line-height:1.8">
+          • <strong>Authentication (AuthN):</strong> At the main entrance gate, security checks your official photo ID card. <em>("Who are you? -> Yes, you are Dinesh.")</em><br>
+          • <strong>Authorization (AuthZ):</strong> Inside the building, you swipe your keycard at the executive server room door. <em>("Are you allowed to enter this specific room? -> No, 403 Forbidden.")</em>
+        </p>
+      </div>
+
+      <div class="section-title">📌 Core Distinction</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
         <div class="card" style="border-color:var(--cyan)">
           <h3 style="color:var(--cyan)">🔑 Authentication (AuthN)</h3>
           <p style="font-size:.85rem;color:var(--text2)"><em>Question: "Who are you?"</em></p>
           <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
-            <li>Verifies identity of the user</li>
-            <li>Happens <strong>FIRST</strong> in the request flow</li>
-            <li>Uses Passwords, OTPs, OAuth, JWT, Fingerprint</li>
+            <li>Verifies user identity credentials</li>
+            <li>Happens <strong>FIRST</strong> in request lifecycle</li>
+            <li>Uses Passwords, OTP, OAuth, JWT, Biometrics</li>
+            <li><strong>Failure Code:</strong> 401 Unauthorized</li>
             <li><strong>Example:</strong> Dinesh logs into PLAYKERS with email/password ✅</li>
           </ul>
         </div>
@@ -3528,23 +3537,14 @@ end</div>
           <h3 style="color:var(--purple)">🛡️ Authorization (AuthZ)</h3>
           <p style="font-size:.85rem;color:var(--text2)"><em>Question: "What are you allowed to do?"</em></p>
           <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
-            <li>Checks permissions & roles (RBAC)</li>
+            <li>Checks permissions & roles (RBAC / ABAC)</li>
             <li>Happens <strong>AFTER</strong> successful authentication</li>
-            <li>Determines ALLOW vs DENY for an endpoint</li>
+            <li>Determines ALLOW vs DENY for endpoints & resources</li>
+            <li><strong>Failure Code:</strong> 403 Forbidden</li>
             <li><strong>Example:</strong> Dinesh (PLAYER) tries DELETE /users → 403 Forbidden ❌</li>
           </ul>
         </div>
       </div>
-
-      <div class="section-title">⚖️ AuthN vs AuthZ Comparison Table</div>
-      <table class="compare-table">
-        <tr><th>Feature</th><th>🔑 Authentication (AuthN)</th><th>🛡️ Authorization (AuthZ)</th></tr>
-        <tr><td>Question Answered</td><td><strong>Who are you?</strong></td><td><strong>What can you access?</strong></td></tr>
-        <tr><td>Order</td><td>Happens 1st (at entry)</td><td>Happens 2nd (before executing action)</td></tr>
-        <tr><td>Primary Goal</td><td>Identity Verification</td><td>Access Control & Permissions</td></tr>
-        <tr><td>Mechanisms</td><td>Passwords, OTP, OAuth 2.0, JWT, MFA, Face ID</td><td>RBAC (Roles & Permissions), ABAC, Scopes</td></tr>
-        <tr><td>HTTP Error Code</td><td><span class="tag tag-red">401 Unauthorized</span> (Missing/Invalid Token)</td><td><span class="tag tag-yellow">403 Forbidden</span> (Valid Token, Insufficient Rights)</td></tr>
-      </table>
 
       <div class="section-title">⚙️ Interactive Security Simulator — PLAYKERS Booking System</div>
       <div class="anim-container">
@@ -3562,57 +3562,52 @@ end</div>
         <div id="authStatus" style="font-size:.82rem;color:var(--text2);margin-top:8px;min-height:20px;padding:4px 8px;">Status: Logged in as Dinesh (Role: PLAYER) | JWT Issued: eyJhbGciOi...</div>
       </div>
 
-      <div class="section-title">🚨 401 Unauthorized vs 403 Forbidden — Crucial Interview Question</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
-        <div class="card" style="border-color:var(--red)">
-          <h3 style="color:var(--red)">🔴 401 Unauthorized</h3>
-          <p style="font-size:.84rem;color:var(--text2)"><em>Meaning: You are not authenticated.</em></p>
-          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px;line-height:1.8">
-            • Missing Bearer token in Header ❌<br>
-            • Expired JWT token ❌<br>
-            • Invalid digital signature ❌<br><br>
-            <strong>Response:</strong> 401 Unauthorized ("Who are you?")
-          </div>
+      <div class="section-title">🔐 Password Hashing & Security (Argon2id / bcrypt)</div>
+      <div class="card">
+        <h3>Never store plain-text passwords!</h3>
+        <p>Storing plain-text passwords in databases is illegal and dangerous. Always apply salted cryptographic hashing:</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2;margin-top:10px">
+          Plain Password ("password123") + Random Salt<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          bcrypt / Argon2id Hashing Algorithm<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          Stored Hash: $2b$12$e86xJ.. (Irreversible & Immune to Rainbow Table attacks)
         </div>
-        <div class="card" style="border-color:var(--yellow)">
-          <h3 style="color:var(--yellow)">🟡 403 Forbidden</h3>
-          <p style="font-size:.84rem;color:var(--text2)"><em>Meaning: Identity verified, but access denied.</em></p>
-          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px;line-height:1.8">
-            • User authenticated as Dinesh (PLAYER) ✅<br>
-            • Requests DELETE /tournaments/101<br>
-            • Permission required: ADMIN ❌<br><br>
-            <strong>Response:</strong> 403 Forbidden ("I know you, but NO")
+      </div>
+
+      <div class="section-title">📱 Multi-Factor Authentication (MFA)</div>
+      <div class="card">
+        <p>MFA combines two or more distinct verification factors:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+          <div style="background:rgba(99,102,241,.08);padding:10px;border-radius:6px">
+            <strong style="color:var(--accent2);font-size:.8rem">1. Something You Know</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Passwords, PINs, secret security questions.</p>
+          </div>
+          <div style="background:rgba(34,197,94,.08);padding:10px;border-radius:6px">
+            <strong style="color:var(--green);font-size:.8rem">2. Something You Have</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Phone SMS OTP, Authenticator app TOTP, Hardware YubiKey.</p>
+          </div>
+          <div style="background:rgba(236,72,153,.08);padding:10px;border-radius:6px">
+            <strong style="color:#ec4899;font-size:.8rem">3. Something You Are</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Biometric Fingerprint, Face ID scan, Iris recognition.</p>
           </div>
         </div>
       </div>
 
       <div class="section-title">🎟️ JSON Web Tokens (JWT) Deep-Dive</div>
       <div class="card">
-        <h3>Stateless Token Structure</h3>
-        <p>A JWT is a compact, URL-safe token split into 3 parts separated by dots (<code>Header.Payload.Signature</code>):</p>
-        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.8rem;line-height:2;margin-top:10px">
+        <h3>Stateless Token Structure & Warning</h3>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.8rem;line-height:2">
           <span style="color:var(--red)">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.<span style="color:var(--purple)">eyJ1c2VySWQiOiIxMjMiLCJyb2xlIjoiUExBWUVSIiwiaWF0IjoxNTE2MjM5MDIyfQ</span>.<span style="color:var(--cyan)">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
-          <div style="background:rgba(239,68,68,.08);padding:10px;border-radius:6px">
-            <strong style="color:var(--red);font-size:.8rem">1. Header</strong>
-            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Specifies signing algorithm (e.g. HS256 / RS256) and token type (JWT).</p>
-          </div>
-          <div style="background:rgba(168,85,247,.08);padding:10px;border-radius:6px">
-            <strong style="color:var(--purple);font-size:.8rem">2. Payload (Claims)</strong>
-            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Contains user claims: <code>userId</code>, <code>role</code>, <code>email</code>, and expiration <code>exp</code>.</p>
-          </div>
-          <div style="background:rgba(6,182,212,.08);padding:10px;border-radius:6px">
-            <strong style="color:var(--cyan);font-size:.8rem">3. Signature</strong>
-            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">HMAC-SHA256 hash using secret key. Prevents client-side tampering!</p>
-          </div>
-        </div>
+        <p style="margin-top:10px;font-size:.84rem;color:var(--text2)">
+          ⚠️ <strong>IMPORTANT:</strong> JWT payloads are <em>encoded</em> (Base64URL), not <em>encrypted</em>. Anyone can decode and view claims! Never store passwords, secret keys, or credit card numbers in a JWT payload.
+        </p>
       </div>
 
       <div class="section-title">⚡ Access Token vs Refresh Token Architecture</div>
       <div class="card">
-        <p>Never rely on a single long-lived token! Modern systems use a dual-token architecture:</p>
-        <table class="compare-table" style="margin-top:10px">
+        <table class="compare-table">
           <tr><th>Token Type</th><th>Lifespan</th><th>Usage & Storage</th><th>Purpose</th></tr>
           <tr><td><span class="tag tag-green">Access Token</span></td><td>Short (15 minutes)</td><td>Sent in <code>Authorization: Bearer</code> header</td><td>Stateless API request authorization</td></tr>
           <tr><td><span class="tag tag-purple">Refresh Token</span></td><td>Long (7–30 days)</td><td>Stored in HttpOnly Secure Cookie</td><td>Obtain new Access Token when expired</td></tr>
@@ -3622,40 +3617,49 @@ end</div>
         </div>
       </div>
 
-      <div class="section-title">🌐 OAuth 2.0 & OpenID Connect (OIDC)</div>
-      <div class="card">
-        <h3>"Continue with Google" — Delegated Identity</h3>
-        <p>OAuth 2.0 delegates <em>authorization</em> (access to resources), while OpenID Connect (OIDC) adds an identity layer for <em>authentication</em>.</p>
-        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2;margin-top:10px">
-          User → Click "Continue with Google"<br>
-          &nbsp;&nbsp;↓<br>
-          PLAYKERS redirects to Google Auth Server<br>
-          &nbsp;&nbsp;↓<br>
-          User approves permissions → Google returns ID Token + Auth Code<br>
-          &nbsp;&nbsp;↓<br>
-          PLAYKERS verifies ID Token → User logged in without sharing Google password!
+      <div class="section-title">🛡️ RBAC vs ABAC (Role vs Attribute-Based Access Control)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--blue)">
+          <h3 style="color:var(--blue)">👔 Role-Based Access Control (RBAC)</h3>
+          <p style="font-size:.84rem;color:var(--text2)">Permissions assigned strictly based on user role (PLAYER / TURF_OWNER / ADMIN).</p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.76rem;margin-top:8px">
+            if (user.role === 'ADMIN') allow();
+          </div>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <h3 style="color:var(--green)">🎯 Attribute-Based Access Control (ABAC)</h3>
+          <p style="font-size:.84rem;color:var(--text2)">Evaluates attributes: User ID, Resource Owner ID, Location, Time, & Environment.</p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.76rem;margin-top:8px">
+            if (user.role === 'TURF_OWNER' && user.id === turf.ownerId) allow();
+          </div>
         </div>
       </div>
 
-      <div class="section-title">🛡️ Role-Based Access Control (RBAC) Matrix</div>
+      <div class="section-title">🚨 401 vs 403 vs 404 (Security Obfuscation)</div>
       <table class="compare-table">
-        <tr><th>Role</th><th>Allowed Permissions</th><th>Forbidden Actions</th></tr>
-        <tr><td><span class="tag tag-blue">PLAYER</span></td><td>Book Turf, Join Match, View Profile</td><td>Add Turf, Delete Users, Delete Tournaments ❌</td></tr>
-        <tr><td><span class="tag tag-green">TURF_OWNER</span></td><td>Add Turf, Manage Bookings, View Revenue</td><td>Delete Users, Global System Config ❌</td></tr>
-        <tr><td><span class="tag tag-red">ADMIN</span></td><td>Full System Control, Manage Users, Delete Content</td><td>None (Full Access ✅)</td></tr>
+        <tr><th>Status Code</th><th>Meaning</th><th>When Returned</th></tr>
+        <tr><td><span class="tag tag-red">401 Unauthorized</span></td><td>Authentication Missing / Invalid</td><td>No token, expired JWT, invalid digital signature.</td></tr>
+        <tr><td><span class="tag tag-yellow">403 Forbidden</span></td><td>Identity Verified, Access Denied</td><td>Dinesh (PLAYER) trying to access ADMIN endpoints.</td></tr>
+        <tr><td><span class="tag tag-cyan">404 Not Found</span></td><td>Security Obfuscation / Missing</td><td>Returned instead of 403 to hide existence of sensitive internal URLs from attackers!</td></tr>
       </table>
 
-      <div class="section-title">🔐 Password Security & Hashing</div>
+      <div class="section-title">🔗 Service-to-Service Authentication in Microservices</div>
       <div class="card">
-        <p><strong>NEVER store plain-text passwords in databases!</strong> Always use salted cryptographic password hashing:</p>
-        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
-          Plain Password ("password123") + Salt<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-          bcrypt / Argon2id Hashing Algorithm<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-          Stored Hash: $2b$12$e86.. (Irreversible & Immune to Rainbow Tables)
-        </div>
+        <p>How does Payment Service know a request genuinely came from Booking Service?</p>
+        <ul style="font-size:.84rem;color:var(--text2);line-height:1.9;padding-left:18px">
+          <li><strong>mTLS (Mutual TLS):</strong> Both services verify client/server X.509 SSL certificates.</li>
+          <li><strong>OAuth 2.0 Client Credentials:</strong> Booking Service gets a service-to-service JWT token.</li>
+          <li><strong>Identity Propagation:</strong> API Gateway strips client headers and injects trusted internal headers (e.g. <code>X-User-Id: 123</code>, <code>X-User-Role: PLAYER</code>).</li>
+        </ul>
       </div>
+
+      <div class="section-title">⚠️ Common Security Attacks & Protections</div>
+      <table class="compare-table">
+        <tr><th>Attack Type</th><th>Description</th><th>Protection Mechanism</th></tr>
+        <tr><td><strong style="color:var(--red)">Brute Force</strong></td><td>Automated scripts guess passwords rapidly</td><td>Rate limiting, CAPTCHA, Account locking</td></tr>
+        <tr><td><strong style="color:var(--yellow)">Credential Stuffing</strong></td><td>Using leaked credentials from other sites</td><td>Multi-Factor Authentication (MFA), Anomaly detection</td></tr>
+        <tr><td><strong style="color:var(--purple)">Token Theft / XSS</strong></td><td>Stealing JWT tokens from client memory</td><td>HttpOnly Secure Cookies, Short Token TTL, HTTPS encryption</td></tr>
+      </table>
 
       <div class="section-title">🗺️ Complete Microservices Security Architecture</div>
       <div class="card">
@@ -3668,7 +3672,7 @@ end</div>
                        ▼<br>
                  AUTH SERVICE<br>
                        │<br>
-              Verify Credentials (bcrypt)<br>
+              Verify Credentials (bcrypt / Argon2id)<br>
                        │<br>
                        ▼<br>
               Access Token (JWT) Issued<br>
@@ -3684,24 +3688,27 @@ end</div>
       SERVICE       SERVICE       SERVICE<br>
           │<br>
           ▼<br>
-   RBAC Permission Check (AuthZ)<br>
+   RBAC / ABAC Permission Check (AuthZ)<br>
           │<br>
       ALLOW (200 OK) / DENY (403 Forbidden)
         </div>
       </div>
 
-      <div class="section-title">🧠 One-Line Interview Summary</div>
+      <div class="section-title">🧠 Master Interview Cheat Sheet</div>
       <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.06)">
-        <p style="font-size:.95rem;line-height:1.8">
-          <strong>Authentication (AuthN) verifies WHO you are</strong> (Password, OTP, OAuth, JWT token generation).<br>
-          <strong>Authorization (AuthZ) verifies WHAT you can do</strong> (Role-based permissions check, 403 Forbidden).<br>
-          <strong>401 Unauthorized = Missing/invalid token.</strong> | <strong>403 Forbidden = Authenticated, but no rights.</strong>
+        <p style="font-size:.92rem;line-height:1.8">
+          • <strong>AuthN (Authentication):</strong> Verifies WHO you are. (Passwords, OTP, OAuth, JWT)<br>
+          • <strong>AuthZ (Authorization):</strong> Verifies WHAT you can do. (RBAC, ABAC, Scopes)<br>
+          • <strong>401 Unauthorized:</strong> Missing or invalid credentials. ("Who are you?")<br>
+          • <strong>403 Forbidden:</strong> Authenticated identity lacks permission. ("I know you, but NO.")<br>
+          • <strong>OAuth 2.0:</strong> Delegated authorization framework. | <strong>OIDC:</strong> Identity layer on top of OAuth.<br>
+          • <strong>Password Rule:</strong> Never store plain-text; always salt & hash using <code>Argon2id</code> or <code>bcrypt</code>.
         </p>
       </div>
 
       <div class="real-world">
-        <div class="real-world-title">🌍 Real-World: Auth0 & AWS Cognito</div>
-        <p>Modern enterprises use managed Identity Providers like Auth0, AWS Cognito, or Keycloak to handle multi-tenant authentication, social logins, MFA, and JWT signing out of the box, reducing custom security vulnerabilities.</p>
+        <div class="real-world-title">🌍 Real-World: Auth0, Keycloak & AWS Cognito</div>
+        <p>Modern cloud architectures offload authentication to dedicated Identity Providers (IdP) like Auth0, Keycloak, or AWS Cognito, providing single sign-on (SSO), social logins, MFA, and automated JWT token rotation out of the box.</p>
       </div>
 
       ${navButtons(this)}`;

@@ -1471,3 +1471,122 @@ function initHAFlowCanvas() {
     ctx.restore();
   });
 }
+
+// ============================================================
+//  AUTHENTICATION & AUTHORIZATION CANVAS
+// ============================================================
+let authCurrentUser = 'dinesh';
+let authLastAPI = null;
+let authStatusText = '';
+let authPackets = [], authT = 0;
+
+const AUTH_USERS = {
+  dinesh: { name: 'Dinesh', role: 'PLAYER', color: AR.cyan, token: 'eyJhbGci...PLAYER' },
+  arun: { name: 'Arun', role: 'TURF_OWNER', color: AR.green, token: 'eyJhbGci...TURF_OWNER' },
+  admin: { name: 'Admin', role: 'ADMIN', color: AR.purple, token: 'eyJhbGci...ADMIN' },
+  anon: { name: 'Anonymous', role: 'NONE', color: AR.red, token: null }
+};
+
+function authLogin(userKey) {
+  authCurrentUser = userKey;
+  const user = AUTH_USERS[userKey];
+  ['Dinesh', 'Arun', 'Admin', 'Anon'].forEach(name => {
+    const btn = document.getElementById(`authBtn${name}`);
+    if (btn) btn.classList.toggle('active', name.toLowerCase() === userKey);
+  });
+  authStatusText = user.token ?
+    `Logged in as ${user.name} (Role: ${user.role}) | JWT Token Issued` :
+    `Logged out (Anonymous user) | No Authorization Token`;
+}
+
+function authCallAPI(endpoint) {
+  const user = AUTH_USERS[authCurrentUser];
+  authPackets.push({ t: 0, endpoint, user });
+
+  if (!user.token) {
+    authStatusText = `❌ 401 Unauthorized: Request to /${endpoint} rejected — No Bearer JWT token provided!`;
+    return;
+  }
+
+  if (endpoint === 'book') {
+    authStatusText = `✅ 200 OK: ${user.name} (${user.role}) has permission to BOOK TURF. Request succeeded!`;
+  } else if (endpoint === 'add') {
+    if (user.role === 'TURF_OWNER' || user.role === 'ADMIN') {
+      authStatusText = `✅ 200 OK: ${user.name} (${user.role}) has permission to ADD TURF. Request succeeded!`;
+    } else {
+      authStatusText = `⛔ 403 Forbidden: ${user.name} (${user.role}) is authenticated, but lacks permission for ADD TURF!`;
+    }
+  } else if (endpoint === 'delete') {
+    if (user.role === 'ADMIN') {
+      authStatusText = `✅ 200 OK: ${user.name} (${user.role}) has permission to DELETE USER. Request succeeded!`;
+    } else {
+      authStatusText = `⛔ 403 Forbidden: ${user.name} (${user.role}) is authenticated, but lacks permission for DELETE USER!`;
+    }
+  }
+}
+
+function initAuthCanvas() {
+  const el = document.getElementById('authCanvas'); if (!el) return;
+  _stopRaf('authCanvas');
+  arStart('authCanvas', () => {
+    const c = arCanvas('authCanvas'); if (!c) return;
+    const { ctx, W, H } = c;
+    authT += 0.015;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    ctx.clearRect(0, 0, W, H);
+
+    const user = AUTH_USERS[authCurrentUser];
+    const userX = 75, userY = H * 0.5;
+    const gwX = W * 0.35, gwY = H * 0.5;
+    const rbacX = W * 0.62, rbacY = H * 0.5;
+    const resX = W - 80, resY = H * 0.5;
+
+    ctx.save(); ctx.shadowColor = user.color; ctx.shadowBlur = 4;
+    gBox(ctx, userX, userY, 110, 60, 8, user.color + '18', user.color, 1.5);
+    ctx.restore();
+    txt(ctx, `${user.name}`, userX, userY - 12, { size: 10, color: user.color, weight: '800' });
+    txt(ctx, `Role: ${user.role}`, userX, userY + 2, { size: 8, color: AR.text2, weight: '700' });
+    txt(ctx, user.token ? '🔑 JWT Active' : '❌ No Token', userX, userY + 16, { size: 7.5, color: user.token ? AR.green : AR.red });
+
+    ctx.save(); ctx.shadowColor = AR.yellow; ctx.shadowBlur = 4;
+    gBox(ctx, gwX, gwY, 120, 64, 8, AR.yellow + '18', AR.yellow, 1.5);
+    ctx.restore();
+    txt(ctx, '🚪 API Gateway', gwX, gwY - 12, { size: 10, color: AR.yellow, weight: '800' });
+    txt(ctx, '1. Verify Signature', gwX, gwY + 2, { size: 8, color: AR.text2, weight: '700' });
+    txt(ctx, user.token ? 'AuthN: Passed ✅' : 'AuthN: 401 ❌', gwX, gwY + 16, { size: 7.5, color: user.token ? AR.green : AR.red, weight: '700' });
+
+    ctx.save(); ctx.shadowColor = AR.purple; ctx.shadowBlur = 4;
+    gBox(ctx, rbacX, rbacY, 120, 64, 8, AR.purple + '18', AR.purple, 1.5);
+    ctx.restore();
+    txt(ctx, '🛡️ RBAC Engine', rbacX, rbacY - 12, { size: 10, color: AR.purple, weight: '800' });
+    txt(ctx, '2. Permission Check', rbacX, rbacY + 2, { size: 8, color: AR.text2, weight: '700' });
+    txt(ctx, 'Match Role ↔ Path', rbacX, rbacY + 16, { size: 7.5, color: AR.text3 });
+
+    gBox(ctx, resX, resY, 100, 60, 8, AR.green + '18', AR.green, 1.5);
+    txt(ctx, '⚙️ Microservice', resX, resY - 10, { size: 10, color: AR.green, weight: '800' });
+    txt(ctx, 'Execute Request', resX, resY + 8, { size: 8, color: AR.text3 });
+
+    arrowLine(ctx, userX + 55, userY, gwX - 60, gwY, AR.yellow + '88', 0, false, 1.5);
+    arrowLine(ctx, gwX + 60, gwY, rbacX - 60, rbacY, user.token ? AR.green + '88' : AR.red + '44', 0, !user.token, 1.5);
+    arrowLine(ctx, rbacX + 60, rbacY, resX - 50, resY, AR.purple + '88', 0, false, 1.5);
+
+    authPackets = authPackets.filter(p => p.t < 1);
+    authPackets.forEach(p => {
+      p.t += 0.03;
+      let px = 0, py = 0;
+      if (p.t < 0.5) {
+        px = lerp(userX + 55, gwX - 60, ease(p.t * 2));
+        py = lerp(userY, gwY, ease(p.t * 2));
+      } else {
+        px = lerp(gwX + 60, rbacX - 60, ease((p.t - 0.5) * 2));
+        py = lerp(gwY, rbacY, ease((p.t - 0.5) * 2));
+      }
+      gDot(ctx, px, py, 5, p.user.color, 0.9);
+    });
+
+    const statusEl = document.getElementById('authStatus');
+    if (statusEl) statusEl.textContent = authStatusText || `Status: Logged in as ${user.name} (Role: ${user.role}) | JWT Token Active`;
+
+    ctx.restore();
+  });
+}

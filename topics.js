@@ -3297,7 +3297,7 @@ end</div>
   title: "High Availability & Fault Tolerance",
   badge: "Architecture", badgeClass: "badge-architecture",
   subtitle: "High Availability (HA) minimizes system downtime through redundancy and failover, while Fault Tolerance (FT) enables a system to continue operating correctly even when individual components fail.",
-  prev: "circuit-breaker", next: "blob-storage",
+  prev: "circuit-breaker", next: "auth-authz",
   render(c) {
     c.innerHTML = `
       ${hero(this)}
@@ -3502,12 +3502,219 @@ end</div>
   }
 },
 
+// ── AUTHENTICATION & AUTHORIZATION ────────────────────────────
+"auth-authz": {
+  title: "Authentication & Authorization",
+  badge: "Architecture", badgeClass: "badge-architecture",
+  subtitle: "Authentication verifies WHO a user is, while Authorization determines WHAT resources or actions that authenticated user is allowed to access.",
+  prev: "ha-ft", next: "blob-storage",
+  render(c) {
+    c.innerHTML = `
+      ${hero(this)}
+
+      <div class="section-title">📌 Authentication vs Authorization: The Core Difference</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--cyan)">
+          <h3 style="color:var(--cyan)">🔑 Authentication (AuthN)</h3>
+          <p style="font-size:.85rem;color:var(--text2)"><em>Question: "Who are you?"</em></p>
+          <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
+            <li>Verifies identity of the user</li>
+            <li>Happens <strong>FIRST</strong> in the request flow</li>
+            <li>Uses Passwords, OTPs, OAuth, JWT, Fingerprint</li>
+            <li><strong>Example:</strong> Dinesh logs into PLAYKERS with email/password ✅</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--purple)">
+          <h3 style="color:var(--purple)">🛡️ Authorization (AuthZ)</h3>
+          <p style="font-size:.85rem;color:var(--text2)"><em>Question: "What are you allowed to do?"</em></p>
+          <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
+            <li>Checks permissions & roles (RBAC)</li>
+            <li>Happens <strong>AFTER</strong> successful authentication</li>
+            <li>Determines ALLOW vs DENY for an endpoint</li>
+            <li><strong>Example:</strong> Dinesh (PLAYER) tries DELETE /users → 403 Forbidden ❌</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-title">⚖️ AuthN vs AuthZ Comparison Table</div>
+      <table class="compare-table">
+        <tr><th>Feature</th><th>🔑 Authentication (AuthN)</th><th>🛡️ Authorization (AuthZ)</th></tr>
+        <tr><td>Question Answered</td><td><strong>Who are you?</strong></td><td><strong>What can you access?</strong></td></tr>
+        <tr><td>Order</td><td>Happens 1st (at entry)</td><td>Happens 2nd (before executing action)</td></tr>
+        <tr><td>Primary Goal</td><td>Identity Verification</td><td>Access Control & Permissions</td></tr>
+        <tr><td>Mechanisms</td><td>Passwords, OTP, OAuth 2.0, JWT, MFA, Face ID</td><td>RBAC (Roles & Permissions), ABAC, Scopes</td></tr>
+        <tr><td>HTTP Error Code</td><td><span class="tag tag-red">401 Unauthorized</span> (Missing/Invalid Token)</td><td><span class="tag tag-yellow">403 Forbidden</span> (Valid Token, Insufficient Rights)</td></tr>
+      </table>
+
+      <div class="section-title">⚙️ Interactive Security Simulator — PLAYKERS Booking System</div>
+      <div class="anim-container">
+        <div class="anim-label">Test logging in as different user roles and making API requests (Watch 401 vs 403 responses)</div>
+        <canvas id="authCanvas" height="300"></canvas>
+        <div class="anim-controls" style="flex-wrap:wrap;gap:6px;">
+          <button class="anim-btn active" id="authBtnDinesh" onclick="authLogin('dinesh')">👤 Login: Dinesh (PLAYER)</button>
+          <button class="anim-btn" id="authBtnArun" onclick="authLogin('arun')">🏟️ Login: Arun (TURF_OWNER)</button>
+          <button class="anim-btn" id="authBtnAdmin" onclick="authLogin('admin')">👑 Login: Admin (ADMIN)</button>
+          <button class="anim-btn" id="authBtnAnon" onclick="authLogin('anon')">🚫 Logout (Anonymous)</button>
+          <button class="anim-btn" onclick="authCallAPI('book')">⚽ POST /book-turf</button>
+          <button class="anim-btn" onclick="authCallAPI('add')">🏟️ POST /add-turf</button>
+          <button class="anim-btn" onclick="authCallAPI('delete')">❌ DELETE /users/123</button>
+        </div>
+        <div id="authStatus" style="font-size:.82rem;color:var(--text2);margin-top:8px;min-height:20px;padding:4px 8px;">Status: Logged in as Dinesh (Role: PLAYER) | JWT Issued: eyJhbGciOi...</div>
+      </div>
+
+      <div class="section-title">🚨 401 Unauthorized vs 403 Forbidden — Crucial Interview Question</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--red)">
+          <h3 style="color:var(--red)">🔴 401 Unauthorized</h3>
+          <p style="font-size:.84rem;color:var(--text2)"><em>Meaning: You are not authenticated.</em></p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px;line-height:1.8">
+            • Missing Bearer token in Header ❌<br>
+            • Expired JWT token ❌<br>
+            • Invalid digital signature ❌<br><br>
+            <strong>Response:</strong> 401 Unauthorized ("Who are you?")
+          </div>
+        </div>
+        <div class="card" style="border-color:var(--yellow)">
+          <h3 style="color:var(--yellow)">🟡 403 Forbidden</h3>
+          <p style="font-size:.84rem;color:var(--text2)"><em>Meaning: Identity verified, but access denied.</em></p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px;line-height:1.8">
+            • User authenticated as Dinesh (PLAYER) ✅<br>
+            • Requests DELETE /tournaments/101<br>
+            • Permission required: ADMIN ❌<br><br>
+            <strong>Response:</strong> 403 Forbidden ("I know you, but NO")
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">🎟️ JSON Web Tokens (JWT) Deep-Dive</div>
+      <div class="card">
+        <h3>Stateless Token Structure</h3>
+        <p>A JWT is a compact, URL-safe token split into 3 parts separated by dots (<code>Header.Payload.Signature</code>):</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.8rem;line-height:2;margin-top:10px">
+          <span style="color:var(--red)">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.<span style="color:var(--purple)">eyJ1c2VySWQiOiIxMjMiLCJyb2xlIjoiUExBWUVSIiwiaWF0IjoxNTE2MjM5MDIyfQ</span>.<span style="color:var(--cyan)">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+          <div style="background:rgba(239,68,68,.08);padding:10px;border-radius:6px">
+            <strong style="color:var(--red);font-size:.8rem">1. Header</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Specifies signing algorithm (e.g. HS256 / RS256) and token type (JWT).</p>
+          </div>
+          <div style="background:rgba(168,85,247,.08);padding:10px;border-radius:6px">
+            <strong style="color:var(--purple);font-size:.8rem">2. Payload (Claims)</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">Contains user claims: <code>userId</code>, <code>role</code>, <code>email</code>, and expiration <code>exp</code>.</p>
+          </div>
+          <div style="background:rgba(6,182,212,.08);padding:10px;border-radius:6px">
+            <strong style="color:var(--cyan);font-size:.8rem">3. Signature</strong>
+            <p style="font-size:.76rem;color:var(--text2);margin-top:4px">HMAC-SHA256 hash using secret key. Prevents client-side tampering!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">⚡ Access Token vs Refresh Token Architecture</div>
+      <div class="card">
+        <p>Never rely on a single long-lived token! Modern systems use a dual-token architecture:</p>
+        <table class="compare-table" style="margin-top:10px">
+          <tr><th>Token Type</th><th>Lifespan</th><th>Usage & Storage</th><th>Purpose</th></tr>
+          <tr><td><span class="tag tag-green">Access Token</span></td><td>Short (15 minutes)</td><td>Sent in <code>Authorization: Bearer</code> header</td><td>Stateless API request authorization</td></tr>
+          <tr><td><span class="tag tag-purple">Refresh Token</span></td><td>Long (7–30 days)</td><td>Stored in HttpOnly Secure Cookie</td><td>Obtain new Access Token when expired</td></tr>
+        </table>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:1.9;margin-top:10px">
+          Access Token Expired (401) → Client sends Refresh Token → Auth Server verifies → Issues New Access Token ✅
+        </div>
+      </div>
+
+      <div class="section-title">🌐 OAuth 2.0 & OpenID Connect (OIDC)</div>
+      <div class="card">
+        <h3>"Continue with Google" — Delegated Identity</h3>
+        <p>OAuth 2.0 delegates <em>authorization</em> (access to resources), while OpenID Connect (OIDC) adds an identity layer for <em>authentication</em>.</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2;margin-top:10px">
+          User → Click "Continue with Google"<br>
+          &nbsp;&nbsp;↓<br>
+          PLAYKERS redirects to Google Auth Server<br>
+          &nbsp;&nbsp;↓<br>
+          User approves permissions → Google returns ID Token + Auth Code<br>
+          &nbsp;&nbsp;↓<br>
+          PLAYKERS verifies ID Token → User logged in without sharing Google password!
+        </div>
+      </div>
+
+      <div class="section-title">🛡️ Role-Based Access Control (RBAC) Matrix</div>
+      <table class="compare-table">
+        <tr><th>Role</th><th>Allowed Permissions</th><th>Forbidden Actions</th></tr>
+        <tr><td><span class="tag tag-blue">PLAYER</span></td><td>Book Turf, Join Match, View Profile</td><td>Add Turf, Delete Users, Delete Tournaments ❌</td></tr>
+        <tr><td><span class="tag tag-green">TURF_OWNER</span></td><td>Add Turf, Manage Bookings, View Revenue</td><td>Delete Users, Global System Config ❌</td></tr>
+        <tr><td><span class="tag tag-red">ADMIN</span></td><td>Full System Control, Manage Users, Delete Content</td><td>None (Full Access ✅)</td></tr>
+      </table>
+
+      <div class="section-title">🔐 Password Security & Hashing</div>
+      <div class="card">
+        <p><strong>NEVER store plain-text passwords in databases!</strong> Always use salted cryptographic password hashing:</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
+          Plain Password ("password123") + Salt<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          bcrypt / Argon2id Hashing Algorithm<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          Stored Hash: $2b$12$e86.. (Irreversible & Immune to Rainbow Tables)
+        </div>
+      </div>
+
+      <div class="section-title">🗺️ Complete Microservices Security Architecture</div>
+      <div class="card">
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2">
+                     USER<br>
+                       │<br>
+                       ▼<br>
+                  LOGIN / SIGNUP<br>
+                       │<br>
+                       ▼<br>
+                 AUTH SERVICE<br>
+                       │<br>
+              Verify Credentials (bcrypt)<br>
+                       │<br>
+                       ▼<br>
+              Access Token (JWT) Issued<br>
+                       │<br>
+                       ▼<br>
+                   API GATEWAY<br>
+                       │<br>
+                 Verify Token Signature (AuthN)<br>
+                       │<br>
+          ┌────────────┼────────────┐<br>
+          ▼            ▼            ▼<br>
+      BOOKING       PAYMENT       MATCH<br>
+      SERVICE       SERVICE       SERVICE<br>
+          │<br>
+          ▼<br>
+   RBAC Permission Check (AuthZ)<br>
+          │<br>
+      ALLOW (200 OK) / DENY (403 Forbidden)
+        </div>
+      </div>
+
+      <div class="section-title">🧠 One-Line Interview Summary</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.06)">
+        <p style="font-size:.95rem;line-height:1.8">
+          <strong>Authentication (AuthN) verifies WHO you are</strong> (Password, OTP, OAuth, JWT token generation).<br>
+          <strong>Authorization (AuthZ) verifies WHAT you can do</strong> (Role-based permissions check, 403 Forbidden).<br>
+          <strong>401 Unauthorized = Missing/invalid token.</strong> | <strong>403 Forbidden = Authenticated, but no rights.</strong>
+        </p>
+      </div>
+
+      <div class="real-world">
+        <div class="real-world-title">🌍 Real-World: Auth0 & AWS Cognito</div>
+        <p>Modern enterprises use managed Identity Providers like Auth0, AWS Cognito, or Keycloak to handle multi-tenant authentication, social logins, MFA, and JWT signing out of the box, reducing custom security vulnerabilities.</p>
+      </div>
+
+      ${navButtons(this)}`;
+    requestAnimationFrame(() => initAuthCanvas());
+  }
+},
+
 // ── BLOB STORAGE ──────────────────────────────────────────────
 "blob-storage": {
   title: "Blob Storage",
   badge: "Storage & Scale", badgeClass: "badge-storage",
   subtitle: "Blob (Binary Large Object) storage is designed for unstructured data like images, videos, and files at massive scale.",
-  prev: "ha-ft", next: "search",
+  prev: "auth-authz", next: "search",
   render(c) {
     c.innerHTML = `
       ${hero(this)}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>SystemDesign.dev — Learn System Design</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">⚙️ SysDes<span class="logo-accent">ign</span></span>
+      <button class="close-sidebar" id="closeSidebar">✕</button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Foundations</div>
+      <a href="#" class="nav-link active" data-topic="intro">📌 Introduction</a>
+      <a href="#" class="nav-link" data-topic="scalability">📈 Scalability</a>
+      <a href="#" class="nav-link" data-topic="latency">⚡ Latency vs Throughput</a>
+      <a href="#" class="nav-link" data-topic="cap">🔺 CAP Theorem</a>
+
+      <div class="nav-section-title">Core Concepts</div>
+      <a href="#" class="nav-link" data-topic="load-balancing">⚖️ Load Balancing</a>
+      <a href="#" class="nav-link" data-topic="consistent-hashing">🔁 Consistent Hashing</a>
+      <a href="#" class="nav-link" data-topic="caching">💾 Caching</a>
+      <a href="#" class="nav-link" data-topic="cdn">🌐 CDN</a>
+      <a href="#" class="nav-link" data-topic="websocket">🔌 WebSockets</a>
+      <a href="#" class="nav-link" data-topic="databases">🗄️ Databases</a>
+      <a href="#" class="nav-link" data-topic="sharding">✂️ Sharding</a>
+      <a href="#" class="nav-link" data-topic="replication">🔄 Replication</a>
+
+      <div class="nav-section-title">Architecture</div>
+      <a href="#" class="nav-link" data-topic="microservices">🧩 Microservices</a>
+      <a href="#" class="nav-link" data-topic="api-gateway">🚪 API Gateway</a>
+      <a href="#" class="nav-link" data-topic="message-queues">📨 Message Queues</a>
+      <a href="#" class="nav-link" data-topic="event-driven">📡 Event-Driven</a>
+      <a href="#" class="nav-link" data-topic="rate-limiting">🚦 Rate Limiting</a>
+      <a href="#" class="nav-link" data-topic="circuit-breaker">🔌 Circuit Breaker</a>
+
+      <div class="nav-section-title">Storage & Scale</div>
+      <a href="#" class="nav-link" data-topic="blob-storage">📦 Blob Storage</a>
+      <a href="#" class="nav-link" data-topic="search">🔍 Search Systems</a>
+      <a href="#" class="nav-link" data-topic="realtime">🔔 Real-time Systems</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN LAYOUT -->
+  <div class="layout">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn">☰</button>
+      <span class="topbar-title" id="topbarTitle">Introduction to System Design</span>
+      <div class="topbar-right">
+        <span class="progress-label">Progress</span>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="content" id="mainContent">
+      <!-- Loaded dynamically by JS -->
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="ch_animations.js"></script>
+  <script src="db_animations.js"></script>
+  <script src="acid.js"></script>
+  <script src="arch_animations.js"></script>
+  <script src="topics.js"></script>
+</body>
+</html>

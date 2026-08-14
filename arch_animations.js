@@ -1107,54 +1107,122 @@ function initRTCanvas() {
 }
 
 // ============================================================
-//  SERVICE DISCOVERY CANVAS — Dynamic Registration & Health Checks
+//  SERVICE DISCOVERY CANVAS — 6-Step Guided PLAYKERS Booking System
 // ============================================================
-let sdMode = 'client';
-let sdInstances = [
-  { id: 'payment-1', ip: '10.0.0.5:8080', status: 'healthy' },
-  { id: 'payment-2', ip: '10.0.0.8:8080', status: 'healthy' },
-  { id: 'payment-3', ip: '10.0.0.10:8080', status: 'healthy' }
+let sdStep = 1;
+let sdAutoPlay = false;
+let sdTimer = null;
+let sdT = 0;
+
+const SD_STEPS_DATA = [
+  {
+    step: 1,
+    title: "Step 1: Service Registration",
+    desc: "Payment-1 (10.0.0.5), Payment-2 (10.0.0.8), and Payment-3 (10.0.0.10) start up and send POST /register requests to the Service Registry.",
+    conceptTitle: "Service Registry",
+    conceptText: "Central database storing dynamic instance IDs, IP addresses, ports, and health status (healthy/unhealthy).",
+    log: "[10:00:01] Payment-1 (10.0.0.5:8080) registered POST /register → status: healthy ✓\n[10:00:02] Payment-2 (10.0.0.8:8080) registered POST /register → status: healthy ✓\n[10:00:03] Payment-3 (10.0.0.10:8080) registered POST /register → status: healthy ✓"
+  },
+  {
+    step: 2,
+    title: "Step 2: User Books a Turf (Discovery Query)",
+    desc: "User clicks 'Book Turf' → POST /book-turf sent to Booking Service. Booking Service asks Registry: GET /services/payment-service.",
+    conceptTitle: "Service Discovery Query",
+    conceptText: "Microservices query the central Service Registry dynamically to discover network locations without hardcoding IP addresses.",
+    log: "[10:00:08] User clicked 'Book Turf' → POST /book-turf received by Booking Service\n[10:00:10] Booking Service queried Service Registry: GET /services/payment-service"
+  },
+  {
+    step: 3,
+    title: "Step 3: Registry Returns Instances & Local Caching",
+    desc: "Service Registry returns healthy instances [10.0.0.5, 10.0.0.8, 10.0.0.10]. Booking Service saves locations in Local Service Cache.",
+    conceptTitle: "Local Service Cache",
+    conceptText: "Instances are cached locally in memory so Booking Service does not need to query the Service Registry for every API call.",
+    log: "[10:00:12] Service Registry returned 3 healthy instances to Booking Service\n[10:00:13] Booking Service cached locations in memory ('Service location cached')"
+  },
+  {
+    step: 4,
+    title: "Step 4: Load Balancing (Round-Robin)",
+    desc: "Multiple turf booking requests arrive. Booking Service load-balances across healthy instances (P1 → P2 → P3 → P1).",
+    conceptTitle: "Load Balancing",
+    conceptText: "Distributes incoming booking traffic evenly among healthy instances to prevent overloading any single Payment server.",
+    log: "[10:00:15] Request 1 → Payment-1 (10.0.0.5:8080) ✅\n[10:00:16] Request 2 → Payment-2 (10.0.0.8:8080) ✅\n[10:00:17] Request 3 → Payment-3 (10.0.0.10:8080) ✅\n[10:00:18] Request 4 → Payment-1 (10.0.0.5:8080) ✅"
+  },
+  {
+    step: 5,
+    title: "Step 5: Service Failure & Health Checks",
+    desc: "Payment-2 CRASHES! Heartbeats fail (Heartbeat ❌). Service Registry marks Payment-2 UNHEALTHY ❌ and strips it from discovery results.",
+    conceptTitle: "Heartbeat & Failure Detection",
+    conceptText: "Instances periodically send 'I am alive ❤️' heartbeats. When heartbeats timeout, the registry drops failed instances instantly.",
+    log: "[10:00:22] Payment-2 (10.0.0.8:8080) CRASHED ❌ | STATUS: DOWN\n[10:00:25] Heartbeat ❌ Heartbeat ❌ Heartbeat ❌\n[10:00:30] Registry marked Payment-2 UNHEALTHY and updated active discovery results\n[10:00:32] Request 5 → Payment-1 ✅ | Request 6 → Payment-3 ✅ (Payment-2 skipped!)"
+  },
+  {
+    step: 6,
+    title: "Step 6: Dynamic Auto-Scaling (Payment-4)",
+    desc: "New server Payment-4 (10.0.0.25:8080) boots up, auto-registers with Registry, and Booking Service updates its cache dynamically!",
+    conceptTitle: "Zero-Downtime Auto-Scaling",
+    conceptText: "Newly scaled instances register automatically. Booking Service receives the cache update and routes requests across P1, P3, P4.",
+    log: "[10:00:35] New instance Payment-4 (10.0.0.25:8080) starting up...\n[10:00:38] Payment-4 → Service Registry: POST /register → status: healthy ✓\n[10:00:40] Booking Service cache updated → Traffic now load balancing across Payment-1, Payment-3, Payment-4 ✅"
+  }
 ];
-let sdPackets = [], sdHeartbeats = [], sdT = 0, sdStatusText = '', sdReqIdx = 0;
 
-function setSDMode(m) {
-  sdMode = m;
-  sdStatusText = m === 'client' ? 'Client-Side: Booking service queries Registry directly & load-balances' : 'Server-Side: Booking service calls Gateway → Gateway queries Registry & routes';
-}
-
-function sdSendRequest() {
-  const healthy = sdInstances.filter(i => i.status === 'healthy');
-  if (!healthy.length) {
-    sdStatusText = '❌ Request Failed: No healthy payment-service instances in registry!';
-    return;
+function updateSDUI() {
+  const data = SD_STEPS_DATA[sdStep - 1];
+  for (let i = 1; i <= 6; i++) {
+    const btn = document.getElementById(`sdBtnStep${i}`);
+    if (btn) btn.classList.toggle('active', i === sdStep);
   }
-  const chosen = healthy[sdReqIdx % healthy.length];
-  sdReqIdx++;
-  sdPackets.push({ t: 0, target: chosen, mode: sdMode });
-  sdStatusText = `⚡ Booking Service sending request → Routing to healthy instance ${chosen.ip}`;
+  const titleEl = document.getElementById('sdConceptTitle');
+  const textEl = document.getElementById('sdConceptText');
+  const logEl = document.getElementById('sdEventLog');
+  if (titleEl) titleEl.textContent = `${data.title} — ${data.conceptTitle}`;
+  if (textEl) textEl.textContent = `${data.desc} ${data.conceptText}`;
+  if (logEl) logEl.textContent = data.log;
 }
 
-function sdCrashInstance() {
-  const p2 = sdInstances.find(i => i.id === 'payment-2');
-  if (p2) {
-    p2.status = p2.status === 'healthy' ? 'unhealthy' : 'healthy';
-    sdStatusText = p2.status === 'unhealthy' ? '❌ Payment-2 (10.0.0.8) CRASHED! Heartbeat failed → Registry marked UNHEALTHY' : '✅ Payment-2 recovered & re-registered with Service Registry';
-  }
+function setSDStep(n) {
+  sdStep = Math.max(1, Math.min(6, n));
+  updateSDUI();
 }
 
-function sdAddInstance() {
-  const existing = sdInstances.find(i => i.id === 'payment-4');
-  if (!existing) {
-    sdInstances.push({ id: 'payment-4', ip: '10.0.0.25:8080', status: 'healthy' });
-    sdStatusText = '➕ New Instance Payment-4 (10.0.0.25) started → Auto-registered with Service Registry!';
+function sdPrevStep() {
+  if (sdStep > 1) setSDStep(sdStep - 1);
+}
+
+function sdNextStep() {
+  if (sdStep < 6) setSDStep(sdStep + 1);
+}
+
+function sdTogglePlay() {
+  sdAutoPlay = !sdAutoPlay;
+  const playBtn = document.getElementById('sdPlayBtn');
+  if (playBtn) playBtn.textContent = sdAutoPlay ? '⏸ Pause' : '▶ Play Auto';
+  if (sdAutoPlay) {
+    if (sdTimer) clearInterval(sdTimer);
+    sdTimer = setInterval(() => {
+      if (sdStep < 6) {
+        setSDStep(sdStep + 1);
+      } else {
+        setSDStep(1);
+      }
+    }, 4500);
   } else {
-    sdStatusText = 'Instance 4 already running!';
+    if (sdTimer) { clearInterval(sdTimer); sdTimer = null; }
   }
+}
+
+function sdReset() {
+  if (sdTimer) { clearInterval(sdTimer); sdTimer = null; }
+  sdAutoPlay = false;
+  const playBtn = document.getElementById('sdPlayBtn');
+  if (playBtn) playBtn.textContent = '▶ Play Auto';
+  setSDStep(1);
 }
 
 function initSDCanvas() {
   const el = document.getElementById('sdCanvas'); if (!el) return;
   _stopRaf('sdCanvas');
+  updateSDUI();
+
   arStart('sdCanvas', () => {
     const c = arCanvas('sdCanvas'); if (!c) return;
     const { ctx, W, H } = c;
@@ -1162,76 +1230,119 @@ function initSDCanvas() {
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
     ctx.clearRect(0, 0, W, H);
 
-    const regX = W * 0.5, regY = 40;
-    ctx.save(); ctx.shadowColor = AR.accent; ctx.shadowBlur = 4;
-    gBox(ctx, regX, regY, 180, 52, 8, AR.bg2, AR.accent, 1.5);
-    ctx.restore();
-    txt(ctx, '📋 Service Registry', regX, regY - 10, { size: 10, color: AR.a2, weight: '800' });
-    txt(ctx, '(Consul / Eureka / K8s DNS)', regX, regY + 8, { size: 8, color: AR.text3 });
+    // Positions
+    const userX = 65, userY = H * 0.5;
+    const bookX = W * 0.3, bookY = H * 0.5;
+    const regX = W * 0.52, regY = 55;
+    const instStartX = W - 110;
 
-    const bookX = 75, bookY = H * 0.55;
-    gBox(ctx, bookX, bookY, 110, 50, 8, AR.purple + '18', AR.purple, 1.5);
-    txt(ctx, '🎟️ Booking Svc', bookX, bookY - 8, { size: 10, color: AR.purple, weight: '700' });
-    txt(ctx, 'Cache: payment-svc', bookX, bookY + 8, { size: 8, color: AR.text3 });
-
-    const gwyX = W * 0.32, gwyY = H * 0.55;
-    if (sdMode === 'server') {
-      gBox(ctx, gwyX, gwyY, 84, 44, 6, AR.yellow + '18', AR.yellow, 1.5);
-      txt(ctx, '🚪 Gateway / LB', gwyX, gwyY - 6, { size: 9, color: AR.yellow, weight: '700' });
-      txt(ctx, 'Routing Proxy', gwyX, gwyY + 8, { size: 7, color: AR.text3 });
+    // Determine active instances based on step
+    let instances = [
+      { id: 'Payment-1', ip: '10.0.0.5:8080', status: sdStep >= 1 ? 'healthy' : 'starting' },
+      { id: 'Payment-2', ip: '10.0.0.8:8080', status: sdStep >= 5 ? 'unhealthy' : (sdStep >= 1 ? 'healthy' : 'starting') },
+      { id: 'Payment-3', ip: '10.0.0.10:8080', status: sdStep >= 1 ? 'healthy' : 'starting' }
+    ];
+    if (sdStep >= 6) {
+      instances.push({ id: 'Payment-4', ip: '10.0.0.25:8080', status: 'healthy' });
     }
 
-    const instStartX = W - 90;
-    const instYStep = Math.min(48, (H - 50) / (sdInstances.length || 1));
-    sdInstances.forEach((inst, idx) => {
+    // 1. Draw User Node (Left)
+    ctx.save(); ctx.shadowColor = AR.cyan; ctx.shadowBlur = 4;
+    gBox(ctx, userX, userY, 80, 52, 8, AR.cyan + '18', AR.cyan, 1.5);
+    ctx.restore();
+    txt(ctx, '👤 USER', userX, userY - 8, { size: 10, color: AR.cyan, weight: '800' });
+    txt(ctx, 'Click "Book"', userX, userY + 8, { size: 8, color: AR.text3 });
+
+    // 2. Draw Booking Service Node (Center-Left)
+    ctx.save(); ctx.shadowColor = AR.purple; ctx.shadowBlur = 4;
+    gBox(ctx, bookX, bookY, 130, 68, 8, AR.purple + '18', AR.purple, 1.5);
+    ctx.restore();
+    txt(ctx, '🎟️ Booking Svc', bookX, bookY - 14, { size: 10, color: AR.purple, weight: '800' });
+
+    // Local Service Cache Badge inside Booking Service
+    const hasCache = sdStep >= 3;
+    gBox(ctx, bookX, bookY + 12, 114, 22, 4, hasCache ? AR.green + '22' : AR.bg3, hasCache ? AR.green : AR.border, 1);
+    txt(ctx, hasCache ? '💾 Cache: [P1,P3,P4]' : '💾 Cache: Empty', bookX, bookY + 12, { size: 7.5, color: hasCache ? AR.green : AR.text3, weight: '700' });
+
+    // 3. Draw Service Registry Node (Top Center)
+    ctx.save(); ctx.shadowColor = AR.accent; ctx.shadowBlur = 4;
+    gBox(ctx, regX, regY, 190, 64, 8, AR.bg2, AR.accent, 1.5);
+    ctx.restore();
+    txt(ctx, '📋 Service Registry', regX, regY - 16, { size: 10, color: AR.a2, weight: '800' });
+    txt(ctx, 'payment-service:', regX, regY - 2, { size: 8, color: AR.text2, weight: '700' });
+
+    const healthyCount = instances.filter(i => i.status === 'healthy').length;
+    txt(ctx, `✓ ${healthyCount} Healthy Instance${healthyCount !== 1 ? 's' : ''}`, regX, regY + 12, { size: 8, color: AR.green, weight: '700' });
+
+    // 4. Draw Payment Service Instances (Right Column)
+    const instYStep = Math.min(48, (H - 50) / (instances.length || 1));
+    instances.forEach((inst, idx) => {
       const iy = 40 + idx * instYStep;
-      inst.y = iy; inst.x = instStartX;
+      inst.x = instStartX; inst.y = iy;
       const isOk = inst.status === 'healthy';
       const col = isOk ? AR.green : AR.red;
-      gBox(ctx, inst.x, iy, 120, 36, 6, col + '15', col, 1.5);
-      txt(ctx, `${isOk ? '💳' : '❌'} ${inst.id}`, inst.x - 10, iy - 6, { size: 9, color: col, weight: '700' });
-      txt(ctx, inst.ip, inst.x - 10, iy + 8, { size: 8, color: AR.text3 });
+      ctx.save();
+      if (isOk) { ctx.shadowColor = AR.green; ctx.shadowBlur = 3; }
+      gBox(ctx, inst.x, iy, 130, 36, 6, col + '18', col, 1.5);
+      ctx.restore();
+
+      txt(ctx, `${isOk ? '💳' : '💥'} ${inst.id}`, inst.x - 18, iy - 6, { size: 9, color: col, weight: '700' });
+      txt(ctx, `${inst.ip} ${isOk ? '✓' : '❌'}`, inst.x - 18, iy + 8, { size: 7.5, color: isOk ? AR.text2 : AR.red });
+
+      // Draw Heartbeats (Step >= 1)
+      if (isOk && Math.floor(sdT * 3 + idx) % 3 === 0) {
+        const hbX = lerp(inst.x - 65, regX + 95, (sdT * 2 + idx * 0.2) % 1);
+        const hbY = lerp(iy, regY, (sdT * 2 + idx * 0.2) % 1);
+        gDot(ctx, hbX, hbY, 3, AR.green, 0.7);
+      }
     });
 
-    const healthyCount = sdInstances.filter(i => i.status === 'healthy').length;
-    txt(ctx, `Registered: ${healthyCount}/${sdInstances.length} healthy`, regX, regY + 20, { size: 8, color: AR.green, weight: '700' });
+    // 5. Connecting Arrows & Animated Packets per Step
 
-    if (sdMode === 'client') {
-      arrowLine(ctx, bookX + 55, bookY - 15, regX - 90, regY + 10, AR.accent + '66', 0, true, 1);
-      sdInstances.forEach(inst => {
-        const isOk = inst.status === 'healthy';
-        arrowLine(ctx, bookX + 55, bookY + 5, inst.x - 60, inst.y, (isOk ? AR.purple : AR.red) + '44', 0, !isOk, 1);
+    // User → Booking Svc
+    arrowLine(ctx, userX + 40, userY, bookX - 65, bookY, AR.cyan + '66', 0, sdStep < 2, 1.5);
+    if (sdStep >= 2) {
+      const uT = (sdT * 1.5) % 1;
+      gDot(ctx, lerp(userX + 40, bookX - 65, uT), userY, 5, AR.cyan, 0.9);
+      txt(ctx, 'POST /book-turf', (userX + bookX) / 2 - 12, userY - 10, { size: 7.5, color: AR.cyan, weight: '700' });
+    }
+
+    // Step 1: Payment Services → Service Registry (POST /register)
+    if (sdStep === 1) {
+      instances.forEach(inst => {
+        arrowLine(ctx, inst.x - 65, inst.y, regX + 95, regY + 10, AR.green + '88', sdT * 20, true, 1.5);
       });
-    } else {
-      arrowLine(ctx, bookX + 55, bookY, gwyX - 42, gwyY, AR.purple + '88', 0, false, 1.5);
-      arrowLine(ctx, gwyX, gwyY - 22, regX - 90, regY + 15, AR.yellow + '66', 0, true, 1);
-      sdInstances.forEach(inst => {
-        const isOk = inst.status === 'healthy';
-        arrowLine(ctx, gwyX + 42, gwyY, inst.x - 60, inst.y, (isOk ? AR.green : AR.red) + '44', 0, !isOk, 1);
+      txt(ctx, 'POST /register (IP & Port)', regX + 110, regY + 32, { size: 7.5, color: AR.green, weight: '700' });
+    }
+
+    // Step 2 & 3: Booking Svc ↔ Service Registry (GET /services/payment-service)
+    if (sdStep === 2 || sdStep === 3) {
+      arrowLine(ctx, bookX, bookY - 34, regX - 95, regY, AR.accent + 'aa', sdT * 15, true, 1.5);
+      txt(ctx, 'GET /services/payment-service', (bookX + regX) / 2 - 15, (bookY + regY) / 2 - 12, { size: 7.5, color: AR.accent, weight: '700' });
+    }
+
+    // Step 4..6: Load Balanced Traffic from Booking Svc to Payment Instances
+    if (sdStep >= 4) {
+      const healthyInsts = instances.filter(i => i.status === 'healthy');
+      healthyInsts.forEach((inst, i) => {
+        arrowLine(ctx, bookX + 65, bookY, inst.x - 65, inst.y, AR.purple + '66', 0, false, 1.5);
+        if (Math.floor(sdT * 2 + i) % healthyInsts.length === 0) {
+          const pT = (sdT * 1.8 + i * 0.3) % 1;
+          const px = lerp(bookX + 65, inst.x - 65, ease(pT));
+          const py = lerp(bookY, inst.y, ease(pT));
+          gDot(ctx, px, py, 5, AR.purple, 0.9);
+        }
       });
     }
 
-    sdPackets = sdPackets.filter(p => p.t < 1);
-    sdPackets.forEach(p => {
-      p.t += 0.03;
-      let px = 0, py = 0;
-      if (p.mode === 'client') {
-        px = lerp(bookX + 55, p.target.x - 60, ease(p.t));
-        py = lerp(bookY, p.target.y, ease(p.t));
-      } else {
-        if (p.t < 0.5) {
-          px = lerp(bookX + 55, gwyX - 42, ease(p.t * 2));
-          py = lerp(bookY, gwyY, ease(p.t * 2));
-        } else {
-          px = lerp(gwyX + 42, p.target.x - 60, ease((p.t - 0.5) * 2));
-          py = lerp(gwyY, p.target.y, ease((p.t - 0.5) * 2));
-        }
+    // Step 5 Failure Indicator
+    if (sdStep === 5) {
+      const p2 = instances.find(i => i.id === 'Payment-2');
+      if (p2) {
+        arrowLine(ctx, p2.x - 65, p2.y, regX + 95, regY, AR.red + '99', 0, true, 1.5);
+        txt(ctx, 'Heartbeat ❌ (Timeout)', p2.x - 120, p2.y - 12, { size: 8, color: AR.red, weight: '800' });
       }
-      gDot(ctx, px, py, 5, AR.accent, 0.9);
-    });
-
-    const statusEl = document.getElementById('sdStatus');
-    if (statusEl) statusEl.textContent = sdStatusText || `Mode: ${sdMode === 'client' ? 'Client-Side Discovery' : 'Server-Side Discovery'} | ${healthyCount} Healthy Instances`;
+    }
 
     ctx.restore();
   });

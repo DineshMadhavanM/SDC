@@ -2209,18 +2209,35 @@ microservices: {
 }</div>
       </div>
 
-      <div class="section-title">⚙️ Interactive Service Discovery Visualizer</div>
+      <div class="section-title">⚙️ Interactive Service Discovery Visualizer — PLAYKERS Booking System</div>
       <div class="anim-container">
-        <div class="anim-label">Simulate scaling instances, node crashes, heartbeats, and client vs server-side discovery</div>
-        <canvas id="sdCanvas" height="250"></canvas>
-        <div class="anim-controls" id="sdControlBtns">
-          <button class="anim-btn active" onclick="setSDMode('client')">📱 Client-Side Discovery</button>
-          <button class="anim-btn" onclick="setSDMode('server')">🌐 Server-Side Discovery</button>
-          <button class="anim-btn" onclick="sdSendRequest()">⚡ Send Request</button>
-          <button class="anim-btn" onclick="sdCrashInstance()">💥 Toggle Crash Payment-2</button>
-          <button class="anim-btn" onclick="sdAddInstance()">➕ Add Payment-4</button>
+        <div class="anim-label">6-Step Guided Animation: Registration → Discovery → Local Caching → Load Balancing → Failure → Auto-Scaling</div>
+        <canvas id="sdCanvas" height="320"></canvas>
+
+        <div class="anim-controls" style="flex-wrap:wrap;gap:6px;margin-top:10px;">
+          <button class="anim-btn" onclick="sdPrevStep()">◀ Prev</button>
+          <button class="anim-btn active" id="sdBtnStep1" onclick="setSDStep(1)">1️⃣ Registration</button>
+          <button class="anim-btn" id="sdBtnStep2" onclick="setSDStep(2)">2️⃣ Book Turf</button>
+          <button class="anim-btn" id="sdBtnStep3" onclick="setSDStep(3)">3️⃣ Cache</button>
+          <button class="anim-btn" id="sdBtnStep4" onclick="setSDStep(4)">4️⃣ Load Balancer</button>
+          <button class="anim-btn" id="sdBtnStep5" onclick="setSDStep(5)">5️⃣ Failure</button>
+          <button class="anim-btn" id="sdBtnStep6" onclick="setSDStep(6)">6️⃣ Auto-Scale</button>
+          <button class="anim-btn" id="sdNextBtn" onclick="sdNextStep()">Next ▶</button>
+          <button class="anim-btn" id="sdPlayBtn" onclick="sdTogglePlay()">▶ Play Auto</button>
+          <button class="anim-btn" onclick="sdReset()">🔄 Reset</button>
         </div>
-        <div id="sdStatus" style="font-size:.82rem;color:var(--text2);margin-top:8px;min-height:20px;padding:4px 8px;"></div>
+
+        <div id="sdConceptPanel" class="card" style="margin-top:12px;border-color:var(--accent);background:rgba(99,102,241,0.06);padding:12px 16px;">
+          <h4 id="sdConceptTitle" style="color:var(--accent2);font-size:.9rem;margin-bottom:4px;">Step 1: Service Registration</h4>
+          <p id="sdConceptText" style="font-size:.82rem;color:var(--text2);line-height:1.7">Payment Services start up and automatically send registration POST requests to the central Service Registry with their IP address, port, and health metadata.</p>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">📜 Live System Event Log</div>
+          <pre id="sdEventLog" class="highlight" style="font-family:'Fira Code',monospace;font-size:.76rem;line-height:1.8;padding:10px 14px;max-height:110px;overflow-y:auto;margin:0;color:#22c55e;">[10:00:01] Payment-1 (10.0.0.5:8080) registered with Service Registry
+[10:00:02] Payment-2 (10.0.0.8:8080) registered with Service Registry
+[10:00:03] Payment-3 (10.0.0.10:8080) registered with Service Registry</pre>
+        </div>
       </div>
 
       <div class="section-title">⚡ Client-Side vs Server-Side Discovery</div>
@@ -2258,6 +2275,39 @@ microservices: {
           Request 1..10,000 → Reads from Local Cache (0ms extra delay!)<br>
           Background thread syncs with Service Registry every 30s for updates.
         </div>
+      </div>
+
+      <div class="section-title">🗺️ Complete Animated System Discovery Architecture</div>
+      <div class="card">
+        <h3>End-to-End Microservices Discovery Flow</h3>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2">
+                USER<br>
+                  │<br>
+                  ▼<br>
+           BOOKING SERVICE<br>
+                  │<br>
+        ┌─────────┴─────────┐<br>
+        │                   │<br>
+        ▼                   ▼<br>
+  LOCAL SERVICE CACHE   SERVICE REGISTRY<br>
+                                ▲<br>
+                                │<br>
+                          Heartbeats<br>
+                                │<br>
+                 ┌──────────────┼──────────────┐<br>
+                 ▼              ▼              ▼<br>
+             PAYMENT-1      PAYMENT-3      PAYMENT-4<br>
+             Healthy ✓      Healthy ✓      Healthy ✓
+        </div>
+        <ol style="font-size:.85rem;line-height:2;color:var(--text2);margin-top:10px;padding-left:18px;">
+          <li><strong>Service starts</strong> — Payment instances boot up in cloud/containers.</li>
+          <li><strong>Auto-Registration</strong> — Send <code>POST /register</code> payload with IP & Port to Service Registry.</li>
+          <li><strong>Registry Tracking</strong> — Registry maintains active health table.</li>
+          <li><strong>Service Discovery</strong> — Booking Service queries Registry or reads Local Cache.</li>
+          <li><strong>Load Balancing</strong> — Distributes traffic evenly (Round-Robin) across healthy instances.</li>
+          <li><strong>Failure Removal</strong> — Missed heartbeats mark node ❌ UNHEALTHY & strip it from routing.</li>
+          <li><strong>Dynamic Scaling</strong> — New Payment-4 registers automatically without restart.</li>
+        </ol>
       </div>
 
       <div class="section-title">🔀 Service Discovery vs Load Balancer vs API Gateway</div>

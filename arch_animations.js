@@ -1590,3 +1590,114 @@ function initAuthCanvas() {
     ctx.restore();
   });
 }
+
+// ============================================================
+//  MONITORING, LOGGING & OBSERVABILITY CANVAS
+// ============================================================
+let monMode = 'normal';
+let monT = 0;
+let monCpu = 25;
+let monErrRate = 0.2;
+let monLatency = 120;
+let monPackets = [];
+
+function monSimulate(type) {
+  monMode = type;
+  const traceEl = document.getElementById('monTraceWindow');
+  const logEl = document.getElementById('monLogConsole');
+  const traceIdEl = document.getElementById('monTraceId');
+  const randId = 'tr-' + Math.floor(1000 + Math.random() * 9000);
+  if (traceIdEl) traceIdEl.textContent = randId;
+
+  if (type === 'normal') {
+    monCpu = 28; monErrRate = 0.1; monLatency = 120;
+    if (traceEl) traceEl.textContent = `API Gateway: 15ms ✅ | Booking Svc: 35ms ✅ | Payment Svc: 70ms ✅ (Total: 120ms)`;
+    if (logEl) {
+      logEl.style.color = '#22c55e';
+      logEl.textContent = `{"time":"14:30:00Z","level":"INFO","svc":"booking","traceId":"${randId}","msg":"Booking created successfully"}`;
+    }
+  } else if (type === 'slow') {
+    monCpu = 94; monErrRate = 38.5; monLatency = 8500;
+    if (traceEl) traceEl.textContent = `API Gateway: 18ms ✅ | Booking Svc: 40ms ✅ | Payment Svc: 8,442ms 🔴 [DB POOL TIMEOUT]`;
+    if (logEl) {
+      logEl.style.color = '#ef4444';
+      logEl.textContent = `{"time":"14:30:05Z","level":"ERROR","svc":"payment-service","traceId":"${randId}","err":"Database connection pool exhausted (300/300 connections in use)"}`;
+    }
+  } else if (type === 'liveness') {
+    monCpu = 45; monErrRate = 0.0; monLatency = 210;
+    if (traceEl) traceEl.textContent = `Kubernetes Probes: Liveness = Alive ✅ | Readiness = Not Ready ⏸️ (Warming up caches...)`;
+    if (logEl) {
+      logEl.style.color = '#eab308';
+      logEl.textContent = `{"time":"14:30:10Z","level":"WARN","svc":"payment-service","traceId":"${randId}","msg":"Readiness probe failed: Cache warming in progress..."}`;
+    }
+  }
+}
+
+function monReset() {
+  monMode = 'normal';
+  monCpu = 25; monErrRate = 0.2; monLatency = 120;
+  monSimulate('normal');
+}
+
+function initMonCanvas() {
+  const el = document.getElementById('monCanvas'); if (!el) return;
+  _stopRaf('monCanvas');
+  arStart('monCanvas', () => {
+    const c = arCanvas('monCanvas'); if (!c) return;
+    const { ctx, W, H } = c;
+    monT += 0.015;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    ctx.clearRect(0, 0, W, H);
+
+    const gwX = 75, gwY = H * 0.5;
+    const bookX = W * 0.35, bookY = H * 0.5;
+    const payX = W * 0.65, payY = H * 0.5;
+    const dbX = W - 75, dbY = H * 0.5;
+
+    const isSlow = monMode === 'slow';
+    const payCol = isSlow ? AR.red : AR.green;
+    const dbCol = isSlow ? AR.red : AR.accent;
+
+    gBox(ctx, gwX, gwY, 100, 56, 8, AR.yellow + '18', AR.yellow, 1.5);
+    txt(ctx, '🚪 Gateway', gwX, gwY - 8, { size: 10, color: AR.yellow, weight: '800' });
+    txt(ctx, 'Trace: tr-8891', gwX, gwY + 8, { size: 7.5, color: AR.text3 });
+
+    gBox(ctx, bookX, bookY, 110, 56, 8, AR.purple + '18', AR.purple, 1.5);
+    txt(ctx, '🎟️ Booking Svc', bookX, bookY - 8, { size: 10, color: AR.purple, weight: '800' });
+    txt(ctx, 'Metrics / Logs', bookX, bookY + 8, { size: 7.5, color: AR.text3 });
+
+    ctx.save();
+    if (isSlow) { ctx.shadowColor = AR.red; ctx.shadowBlur = 6; }
+    gBox(ctx, payX, payY, 110, 56, 8, payCol + '18', payCol, 1.5);
+    ctx.restore();
+    txt(ctx, `${isSlow ? '💥' : '💳'} Payment Svc`, payX, payY - 8, { size: 10, color: payCol, weight: '800' });
+    txt(ctx, isSlow ? 'Latency: 8.5s 🔴' : 'Latency: 70ms ✅', payX, payY + 8, { size: 7.5, color: payCol, weight: '700' });
+
+    gBox(ctx, dbX, dbY, 95, 56, 8, dbCol + '18', dbCol, 1.5);
+    txt(ctx, `${isSlow ? '🔥' : '🗄️'} Database`, dbX, dbY - 8, { size: 10, color: dbCol, weight: '800' });
+    txt(ctx, isSlow ? 'Pool Full ❌' : 'Conns: 40/300', dbX, dbY + 8, { size: 7.5, color: dbCol });
+
+    arrowLine(ctx, gwX + 50, gwY, bookX - 55, bookY, AR.yellow + '88', 0, false, 1.5);
+    arrowLine(ctx, bookX + 55, bookY, payX - 55, payY, AR.purple + '88', 0, false, 1.5);
+    arrowLine(ctx, payX + 55, payY, dbX - 48, dbY, payCol + '88', 0, isSlow, 1.5);
+
+    const mBoxY = 32;
+    gBox(ctx, W * 0.25, mBoxY, 120, 32, 6, AR.bg2, isSlow ? AR.red : AR.green, 1);
+    txt(ctx, `CPU: ${monCpu}% ${isSlow ? '🚨' : '✅'}`, W * 0.25, mBoxY, { size: 9, color: isSlow ? AR.red : AR.green, weight: '800' });
+
+    gBox(ctx, W * 0.5, mBoxY, 130, 32, 6, AR.bg2, isSlow ? AR.red : AR.green, 1);
+    txt(ctx, `Errors: ${monErrRate}% ${isSlow ? '🔴' : '✅'}`, W * 0.5, mBoxY, { size: 9, color: isSlow ? AR.red : AR.green, weight: '800' });
+
+    gBox(ctx, W * 0.75, mBoxY, 140, 32, 6, AR.bg2, isSlow ? AR.red : AR.cyan, 1);
+    txt(ctx, `Avg Latency: ${monLatency}ms`, W * 0.75, mBoxY, { size: 9, color: isSlow ? AR.red : AR.cyan, weight: '800' });
+
+    if (Math.floor(monT * 3) % 2 === 0) {
+      const pT = (monT * 1.5) % 1;
+      const px = lerp(gwX + 50, dbX - 48, ease(pT));
+      const py = gwY;
+      gDot(ctx, px, py, 5, isSlow ? AR.red : AR.accent, 0.9);
+    }
+
+    ctx.restore();
+  });
+}

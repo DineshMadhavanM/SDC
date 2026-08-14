@@ -3506,7 +3506,7 @@ end</div>
   title: "Authentication & Authorization",
   badge: "Architecture", badgeClass: "badge-architecture",
   subtitle: "Authentication verifies WHO a user is, while Authorization determines WHAT resources or actions that authenticated user is allowed to access.",
-  prev: "ha-ft", next: "blob-storage",
+  prev: "ha-ft", next: "monitoring-logging",
   render(c) {
     c.innerHTML = `
       ${hero(this)}
@@ -3716,12 +3716,212 @@ end</div>
   }
 },
 
+// ── MONITORING & LOGGING ──────────────────────────────────────
+"monitoring-logging": {
+  title: "Monitoring & Logging",
+  badge: "Architecture", badgeClass: "badge-architecture",
+  subtitle: "Monitoring tracks overall system health via metrics, Logging records detailed system events, and Distributed Tracing follows individual requests across microservices.",
+  prev: "auth-authz", next: "blob-storage",
+  render(c) {
+    c.innerHTML = `
+      ${hero(this)}
+
+      <div class="section-title">📌 The Three Pillars of Observability</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:12px 0">
+        <div class="card" style="border-color:var(--cyan)">
+          <h3 style="color:var(--cyan)">📈 1. Metrics (Monitoring)</h3>
+          <p style="font-size:.82rem;color:var(--text2)"><em>"Is the system healthy?"</em></p>
+          <ul style="margin-top:8px;font-size:.8rem;color:var(--text2);line-height:1.7;padding-left:14px">
+            <li>Numerical measurements over time</li>
+            <li>CPU 95%, Latency 2s, Errors 35%</li>
+            <li>Triggers automated alerts 🚨</li>
+            <li><strong>Tells you: WHAT is wrong.</strong></li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--purple)">
+          <h3 style="color:var(--purple)">🕸️ 2. Traces (Distributed)</h3>
+          <p style="font-size:.82rem;color:var(--text2)"><em>"Where is the bottleneck?"</em></p>
+          <ul style="margin-top:8px;font-size:.8rem;color:var(--text2);line-height:1.7;padding-left:14px">
+            <li>Tracks a request across microservices</li>
+            <li>Propagates <code>Trace ID: abc123</code></li>
+            <li>Pinpoints slow services in chain</li>
+            <li><strong>Tells you: WHERE it is wrong.</strong></li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <h3 style="color:var(--green)">📜 3. Logs (Events)</h3>
+          <p style="font-size:.82rem;color:var(--text2)"><em>"What exactly happened?"</em></p>
+          <ul style="margin-top:8px;font-size:.8rem;color:var(--text2);line-height:1.7;padding-left:14px">
+            <li>Detailed JSON event records</li>
+            <li>Timestamp, Level, Service, Error stack</li>
+            <li>Centralized search dashboard</li>
+            <li><strong>Tells you: WHY it happened.</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-title">🚗 The Dashboard Car Analogy</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.05)">
+        <p style="font-size:.88rem;color:var(--text2);line-height:1.8">
+          • <strong>Monitoring:</strong> Your car's dashboard gauges (Speedometer: 100 km/h, Fuel: 10%, Engine Temp: 🚨 High). It alerts you that something is overheating.<br>
+          • <strong>Distributed Tracing:</strong> Tracing the fuel line from tank → pump → engine to see which component clogged.<br>
+          • <strong>Logging:</strong> The car diagnostic computer event log: <code>[14:32:05 ERROR] Radiator fan motor failure (Code 0x44)</code>.
+        </p>
+      </div>
+
+      <div class="section-title">🏆 The 4 Golden Signals of Monitoring</div>
+      <table class="compare-table">
+        <tr><th>Signal</th><th>What It Measures</th><th>Example Threshold & Alert</th></tr>
+        <tr><td><span class="tag tag-blue">1. Latency</span></td><td>Time taken to service a request</td><td>Avg Response Time &gt; 500 ms 🔴</td></tr>
+        <tr><td><span class="tag tag-green">2. Traffic</span></td><td>Demand placed on the system</td><td>Requests per Second (RPS) = 100,000 / sec ⚡</td></tr>
+        <tr><td><span class="tag tag-red">3. Errors</span></td><td>Rate of requests that fail</td><td>HTTP 5xx Error Rate &gt; 5% 🚨</td></tr>
+        <tr><td><span class="tag tag-purple">4. Saturation</span></td><td>Fullness of system resources</td><td>CPU &gt; 90%, DB Pool &gt; 95% ⚠️</td></tr>
+      </table>
+
+      <div class="section-title">⚙️ Interactive Observability Simulator — PLAYKERS Booking System</div>
+      <div class="anim-container">
+        <div class="anim-label">Simulate normal traffic vs Payment DB outage (Watch Metrics, Trace ID propagation, & Live JSON Logs)</div>
+        <canvas id="monCanvas" height="300"></canvas>
+        <div class="anim-controls" style="flex-wrap:wrap;gap:6px;">
+          <button class="anim-btn active" onclick="monSimulate('normal')">⚡ Normal Request (120ms)</button>
+          <button class="anim-btn" onclick="monSimulate('slow')">🐌 Slow Payment DB (8.5s 🔴)</button>
+          <button class="anim-btn" onclick="monSimulate('liveness')">💓 Toggle Liveness/Readiness Probe</button>
+          <button class="anim-btn" onclick="monReset()">🔄 Reset Metrics</button>
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">🕸️ Distributed Trace Timeline (Trace ID: <span id="monTraceId" style="color:var(--accent2)">tr-8891</span>)</div>
+            <div id="monTraceWindow" class="highlight" style="font-family:'Fira Code',monospace;font-size:.74rem;line-height:1.8;padding:8px 12px;height:90px;overflow-y:auto;margin:0">API Gateway: 15ms ✅ | Booking Svc: 35ms ✅ | Payment Svc: 70ms ✅</div>
+          </div>
+          <div>
+            <div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">📜 Centralized Log Collector (JSON Format)</div>
+            <pre id="monLogConsole" class="highlight" style="font-family:'Fira Code',monospace;font-size:.74rem;line-height:1.7;padding:8px 12px;height:90px;overflow-y:auto;margin:0;color:#22c55e;">{"time":"14:30:00Z","level":"INFO","svc":"booking","traceId":"tr-8891","msg":"Booking created"}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">💓 Liveness vs Readiness Probes (Kubernetes)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--red)">
+          <h3 style="color:var(--red)">💓 Liveness Probe</h3>
+          <p style="font-size:.84rem;color:var(--text2)"><em>Question: "Is the application process alive?"</em></p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.76rem;margin-top:8px">
+            If Liveness fails (Deadlock / Freeze):<br>
+            Container is RESTARTED by Kubernetes! 🔄
+          </div>
+        </div>
+        <div class="card" style="border-color:var(--yellow)">
+          <h3 style="color:var(--yellow)">🚦 Readiness Probe</h3>
+          <p style="font-size:.84rem;color:var(--text2)"><em>Question: "Is the app ready to receive traffic?"</em></p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.76rem;margin-top:8px">
+            If Readiness fails (Warming up / DB connecting):<br>
+            Container stays ALIVE, but traffic is PAUSED ⏸️
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">📐 SLI, SLO, SLA & Error Budgets</div>
+      <table class="compare-table">
+        <tr><th>Concept</th><th>Definition</th><th>PLAYKERS Example</th></tr>
+        <tr><td><strong style="color:var(--cyan)">SLI (Indicator)</strong></td><td>Actual measured performance metric</td><td>"Payment API availability measured at 99.95%"</td></tr>
+        <tr><td><strong style="color:var(--green)">SLO (Objective)</strong></td><td>Internal target set by engineering team</td><td>"Target availability ≥ 99.9%"</td></tr>
+        <tr><td><strong style="color:var(--purple)">SLA (Agreement)</strong></td><td>Contractual agreement with financial penalty</td><td>"99.5% uptime guaranteed or customer refund"</td></tr>
+        <tr><td><strong style="color:var(--yellow)">Error Budget</strong></td><td>Allowed downtime allowance (100% - SLO)</td><td>0.1% downtime per month (~43 minutes allowed)</td></tr>
+      </table>
+
+      <div class="section-title">🔄 Pull vs Push Monitoring Models</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--accent)">
+          <h3 style="color:var(--accent2)">📥 Pull Model (e.g. Prometheus)</h3>
+          <p style="font-size:.82rem;color:var(--text2)">Monitoring server periodically scrapes <code>GET /metrics</code> endpoints on application instances.</p>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <h3 style="color:var(--green)">📤 Push Model (e.g. StatsD / Datadog)</h3>
+          <p style="font-size:.82rem;color:var(--text2)">Application instances push metric UDP/HTTP payloads out to a central collector daemon.</p>
+        </div>
+      </div>
+
+      <div class="section-title">📜 Log Levels & Structured JSON Rule</div>
+      <div class="card">
+        <p>Log levels specify severity: <code>DEBUG</code> → <code>INFO</code> → <code>WARN</code> → <code>ERROR</code> → <code>FATAL</code>.</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.8rem;line-height:1.9;margin-top:8px">
+          // ALWAYS use Structured JSON Logging:<br>
+          {<br>
+          &nbsp;&nbsp;"timestamp": "2026-08-14T14:30:25Z",<br>
+          &nbsp;&nbsp;"level": "ERROR",<br>
+          &nbsp;&nbsp;"service": "payment-service",<br>
+          &nbsp;&nbsp;"traceId": "tr-8891",<br>
+          &nbsp;&nbsp;"userId": "123",<br>
+          &nbsp;&nbsp;"message": "Payment DB connection pool exhausted"<br>
+          }
+        </div>
+        <p style="margin-top:8px;font-size:.82rem;color:var(--red)">
+          🔒 <strong>SECURITY RULE:</strong> NEVER log passwords, credit card numbers, JWT tokens, or secret API keys!
+        </p>
+      </div>
+
+      <div class="section-title">⚡ Modern Observability Stack</div>
+      <table class="compare-table">
+        <tr><th>Category</th><th>Standard Tools</th><th>Role in Infrastructure</th></tr>
+        <tr><td><span class="tag tag-blue">Metrics</span></td><td>Prometheus, Grafana, Datadog</td><td>Time-series graphs, alerting dashboards</td></tr>
+        <tr><td><span class="tag tag-green">Logs</span></td><td>Elasticsearch + Logstash + Kibana (ELK), Fluentd, Grafana Loki</td><td>Centralized log collection, indexing, and search</td></tr>
+        <tr><td><span class="tag tag-purple">Traces</span></td><td>Jaeger, Zipkin, OpenTelemetry</td><td>End-to-end distributed transaction tracing</td></tr>
+      </table>
+
+      <div class="section-title">🗺️ Complete Observability Architecture</div>
+      <div class="card">
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2">
+                         USERS<br>
+                           │<br>
+                           ▼<br>
+                      API GATEWAY (Trace ID: tr-8891)<br>
+                           │<br>
+              ┌────────────┼────────────┐<br>
+              ▼            ▼            ▼<br>
+          BOOKING       PAYMENT      NOTIFICATION<br>
+          SERVICE       SERVICE       SERVICE<br>
+              │            │            │<br>
+              └──────┬─────┴─────┬──────┘<br>
+                     │           │<br>
+                 METRICS       LOGS & TRACES<br>
+                     │           │<br>
+                     ▼           ▼<br>
+                PROMETHEUS   LOG COLLECTOR / JAEGER<br>
+                     │           │<br>
+                     ▼           ▼<br>
+                 GRAFANA     ELK DASHBOARD<br>
+                     │<br>
+                     ▼<br>
+             PAGE DUTY ALERTS 🚨
+        </div>
+      </div>
+
+      <div class="section-title">🧠 Master Interview Summary</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.06)">
+        <p style="font-size:.95rem;line-height:1.8">
+          <strong>Monitoring tells you THAT something is wrong.</strong> (Metrics: CPU, Latency, Error Rate)<br>
+          <strong>Distributed Tracing tells you WHERE it is wrong.</strong> (Trace ID propagation across microservices)<br>
+          <strong>Logging tells you WHY it happened.</strong> (Structured JSON event logs with stack traces)<br>
+          <strong>Liveness = App alive? (Restart if dead)</strong> | <strong>Readiness = App ready for traffic? (Pause if warming up)</strong>
+        </p>
+      </div>
+
+      <div class="real-world">
+        <div class="real-world-title">🌍 Real-World: Uber — M3 & Jaeger Distributed Tracing</div>
+        <p>Uber processes billions of microservice requests daily. They created <strong>Jaeger</strong> (now a CNCF project) to trace request flows across thousands of microservices, and <strong>M3DB</strong> to store metrics at massive scale with sub-second dashboard rendering.</p>
+      </div>
+
+      ${navButtons(this)}`;
+    requestAnimationFrame(() => initMonCanvas());
+  }
+},
+
 // ── BLOB STORAGE ──────────────────────────────────────────────
 "blob-storage": {
   title: "Blob Storage",
   badge: "Storage & Scale", badgeClass: "badge-storage",
   subtitle: "Blob (Binary Large Object) storage is designed for unstructured data like images, videos, and files at massive scale.",
-  prev: "auth-authz", next: "search",
+  prev: "monitoring-logging", next: "search",
   render(c) {
     c.innerHTML = `
       ${hero(this)}

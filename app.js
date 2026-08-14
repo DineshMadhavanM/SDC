@@ -39,7 +39,7 @@ if (typeof CanvasRenderingContext2D !== 'undefined') {
 const TOPIC_ORDER = [
   'intro','scalability','latency','cap',
   'load-balancing','consistent-hashing','caching','cdn','websocket','databases','sharding','replication',
-  'microservices','api-gateway','service-discovery','message-queues','event-driven','rate-limiting','circuit-breaker','ha-ft','auth-authz',
+  'microservices','api-gateway','service-discovery','message-queues','event-driven','rate-limiting','circuit-breaker','ha-ft','auth-authz','monitoring-logging',
   'blob-storage','search','realtime'
 ];
 

@@ -3080,7 +3080,7 @@ end</div>
   title: "Circuit Breaker",
   badge: "Architecture", badgeClass: "badge-architecture",
   subtitle: "Circuit Breaker detects repeated failures in a dependency and temporarily stops requests to that dependency — preventing cascading failures and giving the system time to recover.",
-  prev: "rate-limiting", next: "blob-storage",
+  prev: "rate-limiting", next: "ha-ft",
   render(c) {
     c.innerHTML = `
       ${hero(this)}
@@ -3292,12 +3292,222 @@ end</div>
   }
 },
 
+// ── HIGH AVAILABILITY & FAULT TOLERANCE ────────────────────────
+"ha-ft": {
+  title: "High Availability & Fault Tolerance",
+  badge: "Architecture", badgeClass: "badge-architecture",
+  subtitle: "High Availability (HA) minimizes system downtime through redundancy and failover, while Fault Tolerance (FT) enables a system to continue operating correctly even when individual components fail.",
+  prev: "circuit-breaker", next: "blob-storage",
+  render(c) {
+    c.innerHTML = `
+      ${hero(this)}
+
+      <div class="section-title">📌 High Availability vs Fault Tolerance</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--accent)">
+          <h3 style="color:var(--accent2)">⚡ High Availability (HA)</h3>
+          <p style="font-size:.85rem;color:var(--text2)"><em>Focus: Keep the system UP and accessible</em></p>
+          <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
+            <li>Minimizes downtime using redundancy</li>
+            <li>Reroutes traffic away from failed nodes</li>
+            <li>Measures availability in "Nines" (e.g. 99.99%)</li>
+            <li><strong>Example:</strong> Load Balancer → S2 when S1 crashes</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <h3 style="color:var(--green)">🛡️ Fault Tolerance (FT)</h3>
+          <p style="font-size:.85rem;color:var(--text2)"><em>Focus: Survive failures without stopping operations</em></p>
+          <ul style="margin-top:8px;font-size:.84rem;color:var(--text2);line-height:1.8;padding-left:16px">
+            <li>Handles faults gracefully (degraded mode / retry)</li>
+            <li>Operation continues correctly despite node loss</li>
+            <li>Uses queues, circuit breakers, & fallbacks</li>
+            <li><strong>Example:</strong> Booking succeeds even if Notification fails</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-title">⚖️ HA vs Fault Tolerance Comparison</div>
+      <table class="compare-table">
+        <tr><th>Feature</th><th>⚡ High Availability (HA)</th><th>🛡️ Fault Tolerance (FT)</th></tr>
+        <tr><td>Core Goal</td><td>Minimize system downtime</td><td>Survive component failures gracefully</td></tr>
+        <tr><td>Primary Mechanism</td><td>Redundancy, Health Checks, Failover</td><td>Retry, Timeouts, Queues, Replicas, Circuit Breakers</td></tr>
+        <tr><td>User Experience</td><td>Service remains accessible</td><td>Operation completes correctly without crash</td></tr>
+        <tr><td>Failed Node Handling</td><td>Traffic rerouted to healthy backup</td><td>System handles failure inline or asynchronously</td></tr>
+        <tr><td>Key Example</td><td>Load Balancer → healthy server</td><td>Async Queue buffers notification retry</td></tr>
+      </table>
+
+      <div class="section-title">⚙️ Interactive HA & FT Simulator — PLAYKERS Booking System</div>
+      <div class="anim-container">
+        <div class="anim-label">Simulate server crashes, database failovers, and non-critical service failures</div>
+        <canvas id="haCanvas" height="300"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="haSimulate('failS1')">💥 Fail Booking S1 (HA)</button>
+          <button class="anim-btn" onclick="haSimulate('failDB')">💥 Fail Primary DB (Failover)</button>
+          <button class="anim-btn" onclick="haSimulate('failNotify')">💥 Fail Notification (FT)</button>
+          <button class="anim-btn" onclick="haSimulate('traffic')">⚡ Send Traffic</button>
+          <button class="anim-btn" onclick="haReset()">🔄 Restore All</button>
+        </div>
+        <div id="haStatus" style="font-size:.82rem;color:var(--text2);margin-top:8px;min-height:20px;padding:4px 8px;">Status: All systems operational (Active-Active Booking Servers, Primary + Replica DBs)</div>
+      </div>
+
+      <div class="section-title">🗄️ Database Failover: Active-Passive vs Active-Active</div>
+      <div class="card">
+        <h3>Primary DB Failure & Replica Promotion</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px">
+          <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:12px">
+            <div style="font-size:.8rem;font-weight:700;color:var(--accent2);margin-bottom:6px">🔄 Active-Passive (Master-Slave)</div>
+            <div style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2;color:var(--text2)">
+              Primary (Active) → Reads/Writes ✅<br>
+              Backup (Passive) → Standby waiting<br><br>
+              When Primary crashes ❌:<br>
+              Backup promoted to New Primary ✅
+            </div>
+          </div>
+          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:12px">
+            <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:6px">⚡ Active-Active (Multi-Master)</div>
+            <div style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2;color:var(--text2)">
+              Server 1 (Active) → Serves traffic ✅<br>
+              Server 2 (Active) → Serves traffic ✅<br><br>
+              When S1 crashes ❌:<br>
+              S2 handles 100% of traffic automatically
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">💓 Health Checks — How Load Balancers Detect Failures</div>
+      <div class="card">
+        <p>Load Balancers poll backend instances periodically (e.g. every 5 seconds):</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
+          GET /health → 200 OK {"status": "healthy"}<br><br>
+          S1 → 200 OK ✅ (Healthy)<br>
+          S2 → No response ❌ (Marked Down)<br>
+          S3 → 200 OK ✅ (Healthy)<br><br>
+          Result: Load Balancer removes S2 from routing table instantly!
+        </div>
+      </div>
+
+      <div class="section-title">⚠️ Critical vs Non-Critical Dependencies</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0">
+        <div class="card" style="border-color:var(--red)">
+          <h3 style="color:var(--red)">🔴 Critical Dependency (Payment)</h3>
+          <p style="font-size:.84rem;color:var(--text2)">Booking <strong>cannot be confirmed</strong> without payment confirmation.</p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px">
+            Payment ❌ → Booking fails fast<br>
+            Return: "Payment unavailable, try again."
+          </div>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <h3 style="color:var(--green)">🟢 Non-Critical Dependency (Notification)</h3>
+          <p style="font-size:.84rem;color:var(--text2)">Booking <strong>can succeed</strong> even if SMS/email notification fails.</p>
+          <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;margin-top:8px">
+            Booking saved to DB ✅<br>
+            Notification event queued for async retry!
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">🚢 Bulkhead Pattern — Isolating Failures</div>
+      <div class="card">
+        <p>Inspired by ship watertight compartments — if one compartment floods, the ship stays afloat.</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:1.9">
+          Application Connection Pools:<br>
+          ├── Payment Thread Pool &nbsp;&nbsp;&nbsp;&nbsp;(10 threads)<br>
+          ├── Notification Thread Pool (10 threads)<br>
+          └── Search Thread Pool &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(10 threads)<br><br>
+          If Notification Service hangs, it only consumes its 10 threads.<br>
+          Payment & Search pools remain 100% operational!
+        </div>
+      </div>
+
+      <div class="section-title">📈 Availability Percentages — The "Nines" Table</div>
+      <table class="compare-table">
+        <tr><th>Availability</th><th>Downtime per Year</th><th>Downtime per Month</th><th>Downtime per Day</th></tr>
+        <tr><td><span class="tag tag-red">99% (Two Nines)</span></td><td>3.65 days</td><td>7.3 hours</td><td>14.4 minutes</td></tr>
+        <tr><td><span class="tag tag-yellow">99.9% (Three Nines)</span></td><td>8.76 hours</td><td>43.8 minutes</td><td>1.44 minutes</td></tr>
+        <tr><td><span class="tag tag-blue">99.99% (Four Nines)</span></td><td>52.6 minutes</td><td>4.38 minutes</td><td>8.64 seconds</td></tr>
+        <tr><td><span class="tag tag-green">99.999% (Five Nines)</span></td><td>5.26 minutes</td><td>25.9 seconds</td><td>0.86 seconds</td></tr>
+      </table>
+
+      <div class="section-title">🌐 Multi-AZ & Multi-Region Resilience</div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+          <div>
+            <h4 style="color:var(--accent2)">🏢 Multi-AZ (Availability Zones)</h4>
+            <p style="font-size:.82rem;color:var(--text2);line-height:1.7;margin-top:4px">Deploy servers across separate physical datacenters in the same region. If Zone A power fails, Zone B continues instantly.</p>
+          </div>
+          <div>
+            <h4 style="color:var(--green)">🌍 Multi-Region</h4>
+            <p style="font-size:.82rem;color:var(--text2);line-height:1.7;margin-top:4px">Deploy complete stacks across continents (e.g. India Region & US Region). Protects against total regional disasters.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">🗺️ Complete Highly Available PLAYKERS Architecture</div>
+      <div class="card">
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2">
+                         USERS<br>
+                           │<br>
+                           ▼<br>
+                    DNS / CDN Layer<br>
+                           │<br>
+                           ▼<br>
+                  Load Balancer Cluster<br>
+                           │<br>
+                ┌──────────┴──────────┐<br>
+                ▼                     ▼<br>
+         Availability Zone A    Availability Zone B<br>
+                │                     │<br>
+          Booking S1              Booking S3<br>
+          Booking S2              Booking S4<br>
+                │                     │<br>
+                └──────────┬──────────┘<br>
+                           ▼<br>
+                     Message Queue<br>
+                           │<br>
+             ┌─────────────┼─────────────┐<br>
+             ▼             ▼             ▼<br>
+          Payment      Notification   Analytics<br>
+          Service       Service        Service<br>
+             │<br>
+             ▼<br>
+        Database Primary<br>
+             │<br>
+             ▼<br>
+        Database Replicas
+        </div>
+      </div>
+
+      <div class="section-title">🧠 One-Line Interview Summary</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.06)">
+        <p style="font-size:.95rem;line-height:1.8">
+          <strong>HA = Keep the system UP.</strong> (Redundancy, Load Balancing, Failover, Health Checks)<br>
+          <strong>Fault Tolerance = Handle component failures gracefully.</strong> (Retries, Circuit Breakers, Queues, Bulkheads)<br>
+          <strong>Failover = Automatically switch to backup.</strong><br>
+          <strong>Replication = Keep multiple copies of data.</strong>
+        </p>
+      </div>
+
+      <div class="real-world">
+        <div class="real-world-title">🌍 Real-World: AWS S3 — 99.999999999% (11 Nines) Durability</div>
+        <p>AWS S3 stores objects redundantly across a minimum of 3 physical Availability Zones within an AWS Region. It is engineered to withstand concurrent loss of data in two facilities without losing user data.</p>
+      </div>
+      <div class="real-world" style="margin-top:10px">
+        <div class="real-world-title">🌍 Real-World: Netflix Chaos Engineering (Chaos Monkey)</div>
+        <p>Netflix intentionally terminates random production instances during business hours using <strong>Chaos Monkey</strong> to verify that auto-scaling groups, health checks, and circuit breakers handle real-world failures automatically without impacting subscribers.</p>
+      </div>
+
+      ${navButtons(this)}`;
+    requestAnimationFrame(() => initHAFlowCanvas());
+  }
+},
+
 // ── BLOB STORAGE ──────────────────────────────────────────────
 "blob-storage": {
   title: "Blob Storage",
   badge: "Storage & Scale", badgeClass: "badge-storage",
   subtitle: "Blob (Binary Large Object) storage is designed for unstructured data like images, videos, and files at massive scale.",
-  prev: "circuit-breaker", next: "search",
+  prev: "ha-ft", next: "search",
   render(c) {
     c.innerHTML = `
       ${hero(this)}

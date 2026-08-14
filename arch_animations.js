@@ -1347,3 +1347,127 @@ function initSDCanvas() {
     ctx.restore();
   });
 }
+
+// ============================================================
+//  HIGH AVAILABILITY & FAULT TOLERANCE CANVAS
+// ============================================================
+let haNodes = {
+  s1: 'healthy',
+  s2: 'healthy',
+  dbPrimary: 'healthy',
+  dbReplica: 'healthy',
+  notify: 'healthy'
+};
+let haPackets = [], haT = 0, haStatusText = '';
+
+function haSimulate(type) {
+  if (type === 'failS1') {
+    haNodes.s1 = haNodes.s1 === 'healthy' ? 'down' : 'healthy';
+    haStatusText = haNodes.s1 === 'down' ? '💥 Booking S1 CRASHED! Load Balancer reroutes 100% traffic to S2 (High Availability)' : '✅ Booking S1 restored and re-added to Load Balancer';
+  } else if (type === 'failDB') {
+    haNodes.dbPrimary = haNodes.dbPrimary === 'healthy' ? 'down' : 'healthy';
+    haStatusText = haNodes.dbPrimary === 'down' ? '💥 Primary DB CRASHED! Failover triggered → Replica DB promoted to NEW Primary ✅' : '✅ Primary DB recovered and re-joined as Replica';
+  } else if (type === 'failNotify') {
+    haNodes.notify = haNodes.notify === 'healthy' ? 'down' : 'healthy';
+    haStatusText = haNodes.notify === 'down' ? '💥 Notification Svc CRASHED! Booking still succeeds ✅ (Non-critical FT), event queued for retry' : '✅ Notification Svc recovered, processing queued events';
+  } else if (type === 'traffic') {
+    haPackets.push({ t: 0 });
+    haStatusText = '⚡ Traffic burst dispatched across healthy nodes';
+  }
+}
+
+function haReset() {
+  haNodes = { s1: 'healthy', s2: 'healthy', dbPrimary: 'healthy', dbReplica: 'healthy', notify: 'healthy' };
+  haPackets = [];
+  haStatusText = 'Status: All systems operational (Active-Active Booking Servers, Primary + Replica DBs)';
+}
+
+function initHAFlowCanvas() {
+  const el = document.getElementById('haCanvas'); if (!el) return;
+  _stopRaf('haCanvas');
+  arStart('haCanvas', () => {
+    const c = arCanvas('haCanvas'); if (!c) return;
+    const { ctx, W, H } = c;
+    haT += 0.015;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    ctx.clearRect(0, 0, W, H);
+
+    const lbX = 70, lbY = H * 0.5;
+    const s1X = W * 0.32, s1Y = 65;
+    const s2X = W * 0.32, s2Y = H - 65;
+    const dbPX = W * 0.64, dbPY = 65;
+    const dbRX = W * 0.64, dbRY = H - 65;
+    const notifyX = W - 75, notifyY = H * 0.5;
+
+    ctx.save(); ctx.shadowColor = AR.yellow; ctx.shadowBlur = 4;
+    gBox(ctx, lbX, lbY, 90, 56, 8, AR.yellow + '18', AR.yellow, 1.5);
+    ctx.restore();
+    txt(ctx, '⚖️ LB', lbX, lbY - 8, { size: 10, color: AR.yellow, weight: '800' });
+    txt(ctx, 'Health Check', lbX, lbY + 8, { size: 7.5, color: AR.text3 });
+
+    const s1Ok = haNodes.s1 === 'healthy';
+    const s1Col = s1Ok ? AR.purple : AR.red;
+    gBox(ctx, s1X, s1Y, 110, 44, 6, s1Col + '18', s1Col, 1.5);
+    txt(ctx, `${s1Ok ? '🎟️' : '❌'} Booking S1`, s1X, s1Y - 6, { size: 9, color: s1Col, weight: '700' });
+    txt(ctx, s1Ok ? 'Active-Active ✅' : 'DOWN ❌', s1X, s1Y + 8, { size: 7.5, color: s1Ok ? AR.green : AR.red });
+
+    const s2Ok = haNodes.s2 === 'healthy';
+    const s2Col = s2Ok ? AR.purple : AR.red;
+    gBox(ctx, s2X, s2Y, 110, 44, 6, s2Col + '18', s2Col, 1.5);
+    txt(ctx, `${s2Ok ? '🎟️' : '❌'} Booking S2`, s2X, s2Y - 6, { size: 9, color: s2Col, weight: '700' });
+    txt(ctx, s2Ok ? 'Active-Active ✅' : 'DOWN ❌', s2X, s2Y + 8, { size: 7.5, color: s2Ok ? AR.green : AR.red });
+
+    const dbPOk = haNodes.dbPrimary === 'healthy';
+    const dbPCol = dbPOk ? AR.accent : AR.red;
+    gBox(ctx, dbPX, dbPY, 120, 46, 6, dbPCol + '18', dbPCol, 1.5);
+    txt(ctx, `${dbPOk ? '🗄️' : '💥'} Primary DB`, dbPX, dbPY - 7, { size: 9, color: dbPCol, weight: '700' });
+    txt(ctx, dbPOk ? 'Writes (Active) ✅' : 'DOWN (Failed) ❌', dbPX, dbPY + 8, { size: 7.5, color: dbPOk ? AR.a2 : AR.red });
+
+    const isPromoted = !dbPOk;
+    const dbRCol = isPromoted ? AR.green : AR.cyan;
+    gBox(ctx, dbRX, dbRY, 120, 46, 6, dbRCol + '18', dbRCol, 1.5);
+    txt(ctx, `${isPromoted ? '👑' : '🔄'} Replica DB`, dbRX, dbRY - 7, { size: 9, color: dbRCol, weight: '700' });
+    txt(ctx, isPromoted ? 'NEW Primary ✅' : 'Sync Replica ✅', dbRX, dbRY + 8, { size: 7.5, color: dbRCol });
+
+    const nOk = haNodes.notify === 'healthy';
+    const nCol = nOk ? AR.green : AR.red;
+    gBox(ctx, notifyX, notifyY, 100, 44, 6, nCol + '18', nCol, 1.5);
+    txt(ctx, `${nOk ? '🔔' : '❌'} Notify Svc`, notifyX, notifyY - 6, { size: 9, color: nCol, weight: '700' });
+    txt(ctx, nOk ? 'Non-Critical ✅' : 'Queued (FT) 📦', notifyX, notifyY + 8, { size: 7.5, color: nOk ? AR.green : AR.yellow });
+
+    arrowLine(ctx, lbX + 45, lbY - 10, s1X - 55, s1Y, s1Ok ? AR.yellow + '88' : AR.red + '44', 0, !s1Ok, 1.5);
+    arrowLine(ctx, lbX + 45, lbY + 10, s2X - 55, s2Y, s2Ok ? AR.yellow + '88' : AR.red + '44', 0, !s2Ok, 1.5);
+
+    const activeDBX = isPromoted ? dbRX : dbPX;
+    const activeDBY = isPromoted ? dbRY : dbPY;
+    if (s1Ok) arrowLine(ctx, s1X + 55, s1Y, activeDBX - 60, activeDBY, AR.purple + '88', 0, false, 1.5);
+    if (s2Ok) arrowLine(ctx, s2X + 55, s2Y, activeDBX - 60, activeDBY, AR.purple + '88', 0, false, 1.5);
+
+    arrowLine(ctx, activeDBX + 60, activeDBY, notifyX - 50, notifyY, nOk ? AR.green + '88' : AR.yellow + '88', 0, !nOk, 1.5);
+
+    if (dbPOk) arrowLine(ctx, dbPX, dbPY + 23, dbRX, dbRY - 23, AR.cyan + '66', haT * 10, true, 1);
+
+    haPackets = haPackets.filter(p => p.t < 1);
+    haPackets.forEach(p => {
+      p.t += 0.025;
+      const targetS = s1Ok ? { x: s1X, y: s1Y } : { x: s2X, y: s2Y };
+      let px = 0, py = 0;
+      if (p.t < 0.33) {
+        px = lerp(lbX + 45, targetS.x - 55, ease(p.t * 3));
+        py = lerp(lbY, targetS.y, ease(p.t * 3));
+      } else if (p.t < 0.66) {
+        px = lerp(targetS.x + 55, activeDBX - 60, ease((p.t - 0.33) * 3));
+        py = lerp(targetS.y, activeDBY, ease((p.t - 0.33) * 3));
+      } else {
+        px = lerp(activeDBX + 60, notifyX - 50, ease((p.t - 0.66) * 3));
+        py = lerp(activeDBY, notifyY, ease((p.t - 0.66) * 3));
+      }
+      gDot(ctx, px, py, 5, AR.yellow, 0.9);
+    });
+
+    const statusEl = document.getElementById('haStatus');
+    if (statusEl) statusEl.textContent = haStatusText || 'Status: All systems operational (Active-Active Booking Servers, Primary + Replica DBs)';
+
+    ctx.restore();
+  });
+}

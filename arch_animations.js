@@ -1105,3 +1105,134 @@ function initRTCanvas() {
     txt(ctx,'WebSocket: one persistent connection per client — server pushes to all in room instantly',W/2,H-8,{size:8,color:AR.text3});
   });
 }
+
+// ============================================================
+//  SERVICE DISCOVERY CANVAS — Dynamic Registration & Health Checks
+// ============================================================
+let sdMode = 'client';
+let sdInstances = [
+  { id: 'payment-1', ip: '10.0.0.5:8080', status: 'healthy' },
+  { id: 'payment-2', ip: '10.0.0.8:8080', status: 'healthy' },
+  { id: 'payment-3', ip: '10.0.0.10:8080', status: 'healthy' }
+];
+let sdPackets = [], sdHeartbeats = [], sdT = 0, sdStatusText = '', sdReqIdx = 0;
+
+function setSDMode(m) {
+  sdMode = m;
+  sdStatusText = m === 'client' ? 'Client-Side: Booking service queries Registry directly & load-balances' : 'Server-Side: Booking service calls Gateway → Gateway queries Registry & routes';
+}
+
+function sdSendRequest() {
+  const healthy = sdInstances.filter(i => i.status === 'healthy');
+  if (!healthy.length) {
+    sdStatusText = '❌ Request Failed: No healthy payment-service instances in registry!';
+    return;
+  }
+  const chosen = healthy[sdReqIdx % healthy.length];
+  sdReqIdx++;
+  sdPackets.push({ t: 0, target: chosen, mode: sdMode });
+  sdStatusText = `⚡ Booking Service sending request → Routing to healthy instance ${chosen.ip}`;
+}
+
+function sdCrashInstance() {
+  const p2 = sdInstances.find(i => i.id === 'payment-2');
+  if (p2) {
+    p2.status = p2.status === 'healthy' ? 'unhealthy' : 'healthy';
+    sdStatusText = p2.status === 'unhealthy' ? '❌ Payment-2 (10.0.0.8) CRASHED! Heartbeat failed → Registry marked UNHEALTHY' : '✅ Payment-2 recovered & re-registered with Service Registry';
+  }
+}
+
+function sdAddInstance() {
+  const existing = sdInstances.find(i => i.id === 'payment-4');
+  if (!existing) {
+    sdInstances.push({ id: 'payment-4', ip: '10.0.0.25:8080', status: 'healthy' });
+    sdStatusText = '➕ New Instance Payment-4 (10.0.0.25) started → Auto-registered with Service Registry!';
+  } else {
+    sdStatusText = 'Instance 4 already running!';
+  }
+}
+
+function initSDCanvas() {
+  const el = document.getElementById('sdCanvas'); if (!el) return;
+  _stopRaf('sdCanvas');
+  arStart('sdCanvas', () => {
+    const c = arCanvas('sdCanvas'); if (!c) return;
+    const { ctx, W, H } = c;
+    sdT += 0.015;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    ctx.clearRect(0, 0, W, H);
+
+    const regX = W * 0.5, regY = 40;
+    ctx.save(); ctx.shadowColor = AR.accent; ctx.shadowBlur = 4;
+    gBox(ctx, regX, regY, 180, 52, 8, AR.bg2, AR.accent, 1.5);
+    ctx.restore();
+    txt(ctx, '📋 Service Registry', regX, regY - 10, { size: 10, color: AR.a2, weight: '800' });
+    txt(ctx, '(Consul / Eureka / K8s DNS)', regX, regY + 8, { size: 8, color: AR.text3 });
+
+    const bookX = 75, bookY = H * 0.55;
+    gBox(ctx, bookX, bookY, 110, 50, 8, AR.purple + '18', AR.purple, 1.5);
+    txt(ctx, '🎟️ Booking Svc', bookX, bookY - 8, { size: 10, color: AR.purple, weight: '700' });
+    txt(ctx, 'Cache: payment-svc', bookX, bookY + 8, { size: 8, color: AR.text3 });
+
+    const gwyX = W * 0.32, gwyY = H * 0.55;
+    if (sdMode === 'server') {
+      gBox(ctx, gwyX, gwyY, 84, 44, 6, AR.yellow + '18', AR.yellow, 1.5);
+      txt(ctx, '🚪 Gateway / LB', gwyX, gwyY - 6, { size: 9, color: AR.yellow, weight: '700' });
+      txt(ctx, 'Routing Proxy', gwyX, gwyY + 8, { size: 7, color: AR.text3 });
+    }
+
+    const instStartX = W - 90;
+    const instYStep = Math.min(48, (H - 50) / (sdInstances.length || 1));
+    sdInstances.forEach((inst, idx) => {
+      const iy = 40 + idx * instYStep;
+      inst.y = iy; inst.x = instStartX;
+      const isOk = inst.status === 'healthy';
+      const col = isOk ? AR.green : AR.red;
+      gBox(ctx, inst.x, iy, 120, 36, 6, col + '15', col, 1.5);
+      txt(ctx, `${isOk ? '💳' : '❌'} ${inst.id}`, inst.x - 10, iy - 6, { size: 9, color: col, weight: '700' });
+      txt(ctx, inst.ip, inst.x - 10, iy + 8, { size: 8, color: AR.text3 });
+    });
+
+    const healthyCount = sdInstances.filter(i => i.status === 'healthy').length;
+    txt(ctx, `Registered: ${healthyCount}/${sdInstances.length} healthy`, regX, regY + 20, { size: 8, color: AR.green, weight: '700' });
+
+    if (sdMode === 'client') {
+      arrowLine(ctx, bookX + 55, bookY - 15, regX - 90, regY + 10, AR.accent + '66', 0, true, 1);
+      sdInstances.forEach(inst => {
+        const isOk = inst.status === 'healthy';
+        arrowLine(ctx, bookX + 55, bookY + 5, inst.x - 60, inst.y, (isOk ? AR.purple : AR.red) + '44', 0, !isOk, 1);
+      });
+    } else {
+      arrowLine(ctx, bookX + 55, bookY, gwyX - 42, gwyY, AR.purple + '88', 0, false, 1.5);
+      arrowLine(ctx, gwyX, gwyY - 22, regX - 90, regY + 15, AR.yellow + '66', 0, true, 1);
+      sdInstances.forEach(inst => {
+        const isOk = inst.status === 'healthy';
+        arrowLine(ctx, gwyX + 42, gwyY, inst.x - 60, inst.y, (isOk ? AR.green : AR.red) + '44', 0, !isOk, 1);
+      });
+    }
+
+    sdPackets = sdPackets.filter(p => p.t < 1);
+    sdPackets.forEach(p => {
+      p.t += 0.03;
+      let px = 0, py = 0;
+      if (p.mode === 'client') {
+        px = lerp(bookX + 55, p.target.x - 60, ease(p.t));
+        py = lerp(bookY, p.target.y, ease(p.t));
+      } else {
+        if (p.t < 0.5) {
+          px = lerp(bookX + 55, gwyX - 42, ease(p.t * 2));
+          py = lerp(bookY, gwyY, ease(p.t * 2));
+        } else {
+          px = lerp(gwyX + 42, p.target.x - 60, ease((p.t - 0.5) * 2));
+          py = lerp(gwyY, p.target.y, ease((p.t - 0.5) * 2));
+        }
+      }
+      gDot(ctx, px, py, 5, AR.accent, 0.9);
+    });
+
+    const statusEl = document.getElementById('sdStatus');
+    if (statusEl) statusEl.textContent = sdStatusText || `Mode: ${sdMode === 'client' ? 'Client-Side Discovery' : 'Server-Side Discovery'} | ${healthyCount} Healthy Instances`;
+
+    ctx.restore();
+  });
+}

@@ -2138,12 +2138,161 @@ microservices: {
   }
 },
 
+// ── SERVICE DISCOVERY ──────────────────────────────────────────
+"service-discovery": {
+  title: "Service Discovery",
+  badge: "Architecture", badgeClass: "badge-architecture",
+  subtitle: "Service Discovery is a mechanism that helps microservices in a distributed system find the correct network location (IP and Port) of other services dynamically without hardcoding.",
+  prev: "api-gateway", next: "message-queues",
+  render(c) {
+    c.innerHTML = `
+      ${hero(this)}
+
+      <div class="section-title">🔍 What is Service Discovery?</div>
+      <div class="card">
+        <p><strong>Service Discovery = A system that keeps track of where microservice instances are running and helps other services find them dynamically.</strong></p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
+          Service Registry (Phonebook)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↑ register / discover<br>
+          Booking Service ─────────→ Payment Service (10.0.0.5:8080)
+        </div>
+      </div>
+
+      <div class="section-title">❓ Why Do We Need Service Discovery?</div>
+      <div class="card">
+        <p>Suppose you have microservices: <code>User Service</code>, <code>Booking Service</code>, <code>Payment Service</code>, <code>Notification Service</code>.</p>
+        <p style="margin-top:8px">The <strong>Booking Service</strong> needs to call the <strong>Payment Service</strong>.</p>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px">
+          <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px">
+            <div style="font-size:.78rem;font-weight:700;color:var(--red);margin-bottom:6px">❌ Without Service Discovery (Hardcoded IP)</div>
+            <div style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2;color:var(--text2)">
+              Booking Service<br>
+              &nbsp;&nbsp;↓ calls http://192.168.1.10:8080<br>
+              Payment Service<br><br>
+              Payment Service Crashes! 💥<br>
+              New Instance starts at: 192.168.1.25:8080 ✅<br><br>
+              Booking still calls 192.168.1.10 ❌ (CRASH)
+            </div>
+          </div>
+          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:12px">
+            <div style="font-size:.78rem;font-weight:700;color:var(--green);margin-bottom:6px">✅ With Service Discovery (Dynamic)</div>
+            <div style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:2;color:var(--text2)">
+              Booking Service<br>
+              &nbsp;&nbsp;↓ "Where is payment-service?"<br>
+              Service Registry<br>
+              &nbsp;&nbsp;↓ returns 192.168.1.25:8080 ✅<br>
+              Booking calls Payment Service<br><br>
+              Zero downtime, dynamic updates!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">📱 The Service Registry — Central Dynamic Phonebook</div>
+      <div class="card">
+        <p>Think of the Service Registry as a dynamic phonebook of your entire cluster:</p>
+        <table class="compare-table" style="margin-top:10px">
+          <tr><th>Service Name</th><th>Instance ID</th><th>Network Address</th><th>Health Status</th></tr>
+          <tr><td>user-service</td><td>user-01</td><td>10.0.0.1:8080</td><td><span class="tag tag-green">HEALTHY</span></td></tr>
+          <tr><td>payment-service</td><td>payment-01</td><td>10.0.0.5:8080</td><td><span class="tag tag-green">HEALTHY</span></td></tr>
+          <tr><td>payment-service</td><td>payment-02</td><td>10.0.0.8:8080</td><td><span class="tag tag-green">HEALTHY</span></td></tr>
+          <tr><td>notification-service</td><td>notify-01</td><td>10.0.0.12:8080</td><td><span class="tag tag-green">HEALTHY</span></td></tr>
+        </table>
+        <p style="margin-top:10px;font-size:.84rem;color:var(--text2)">When an instance boots up, it posts its metadata JSON to the registry:</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.78rem;line-height:1.9">{
+  "serviceName": "payment-service",
+  "instanceId": "payment-01",
+  "host": "10.0.0.5",
+  "port": 8080,
+  "status": "healthy"
+}</div>
+      </div>
+
+      <div class="section-title">⚙️ Interactive Service Discovery Visualizer</div>
+      <div class="anim-container">
+        <div class="anim-label">Simulate scaling instances, node crashes, heartbeats, and client vs server-side discovery</div>
+        <canvas id="sdCanvas" height="250"></canvas>
+        <div class="anim-controls" id="sdControlBtns">
+          <button class="anim-btn active" onclick="setSDMode('client')">📱 Client-Side Discovery</button>
+          <button class="anim-btn" onclick="setSDMode('server')">🌐 Server-Side Discovery</button>
+          <button class="anim-btn" onclick="sdSendRequest()">⚡ Send Request</button>
+          <button class="anim-btn" onclick="sdCrashInstance()">💥 Toggle Crash Payment-2</button>
+          <button class="anim-btn" onclick="sdAddInstance()">➕ Add Payment-4</button>
+        </div>
+        <div id="sdStatus" style="font-size:.82rem;color:var(--text2);margin-top:8px;min-height:20px;padding:4px 8px;"></div>
+      </div>
+
+      <div class="section-title">⚡ Client-Side vs Server-Side Discovery</div>
+      <table class="compare-table">
+        <tr><th>Feature</th><th>📱 Client-Side Discovery</th><th>🌐 Server-Side Discovery</th></tr>
+        <tr><td>Who queries registry?</td><td>Client / calling microservice directly</td><td>Load Balancer / API Gateway</td></tr>
+        <tr><td>Who load-balances?</td><td>Client library (e.g. Netflix Ribbon)</td><td>Infrastructure Proxy (e.g. AWS ALB, Nginx)</td></tr>
+        <tr><td>Client complexity</td><td>Higher (needs discovery library)</td><td>Lower (simple HTTP request)</td></tr>
+        <tr><td>Network Hops</td><td>1 hop (Client → Target Service)</td><td>2 hops (Client → Gateway → Target)</td></tr>
+        <tr><td>Technologies</td><td>Netflix Eureka, Spring Cloud LoadBalancer</td><td>Kubernetes Service / DNS, HashiCorp Consul + Envoy</td></tr>
+      </table>
+
+      <div class="section-title">💓 Heartbeats, Health Checks & Failure Handling</div>
+      <div class="card">
+        <h3>How does the Registry know if an instance dies?</h3>
+        <p>Every active service instance sends a periodic heartbeat (e.g. every 10 seconds):</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
+          Payment Instance → "I am alive ❤️" → Service Registry
+        </div>
+        <p style="margin-top:10px">If the registry misses 3 consecutive heartbeats:</p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:2">
+          Heartbeat ❌ → Heartbeat ❌ → Heartbeat ❌<br>
+          Registry marks instance: UNHEALTHY ❌<br>
+          Instance removed from discovery pool!
+        </div>
+      </div>
+
+      <div class="section-title">⚡ Does Service Discovery Add Latency?</div>
+      <div class="card">
+        <p>If every single API request queried the Service Registry over the network first, it would double network latency!</p>
+        <p style="margin-top:8px"><strong>Solution: Local Instance Caching</strong></p>
+        <div class="highlight" style="font-family:'Fira Code',monospace;font-size:.82rem;line-height:1.9">
+          Booking Service maintains a Local Memory Cache:<br>
+          payment-service = [10.0.0.5:8080, 10.0.0.8:8080, 10.0.0.10:8080]<br><br>
+          Request 1..10,000 → Reads from Local Cache (0ms extra delay!)<br>
+          Background thread syncs with Service Registry every 30s for updates.
+        </div>
+      </div>
+
+      <div class="section-title">🔀 Service Discovery vs Load Balancer vs API Gateway</div>
+      <table class="compare-table">
+        <tr><th>Component</th><th>Core Question Answered</th><th>Example Technology</th></tr>
+        <tr><td><span class="tag tag-blue">Service Discovery</span></td><td>"Where are all healthy instances running?"</td><td>HashiCorp Consul, Netflix Eureka, K8s CoreDNS</td></tr>
+        <tr><td><span class="tag tag-yellow">Load Balancer</span></td><td>"Which single healthy instance gets this request?"</td><td>HAProxy, Nginx, AWS ALB</td></tr>
+        <tr><td><span class="tag tag-green">API Gateway</span></td><td>"Is this client authenticated & allowed to enter?"</td><td>Kong, AWS API Gateway, Nginx</td></tr>
+      </table>
+
+      <div class="section-title">🧠 One-Line Interview Answer</div>
+      <div class="card" style="border-color:var(--accent);background:rgba(99,102,241,0.06)">
+        <p style="font-size:1rem;line-height:1.7"><strong>Service Discovery is a mechanism in distributed systems that allows microservices to dynamically register themselves and enables other services to discover healthy instances without hardcoding IP addresses.</strong></p>
+      </div>
+
+      <div class="real-world">
+        <div class="real-world-title">🌍 Real-World: Kubernetes CoreDNS & Kube-Proxy</div>
+        <p>In Kubernetes, every Pod gets a dynamic ephemeral IP. Kubernetes runs <strong>CoreDNS</strong> as a built-in Service Discovery engine. When <code>booking-service</code> calls <code>http://payment-service</code>, CoreDNS resolves the domain to cluster Pod IPs automatically, while Kube-Proxy load-balances traffic across healthy Pods.</p>
+      </div>
+      <div class="real-world" style="margin-top:10px">
+        <div class="real-world-title">🌍 Real-World: Netflix Eureka & Ribbon (Pioneer of Microservices)</div>
+        <p>Netflix built <strong>Eureka</strong> to manage tens of thousands of AWS EC2 instances auto-scaling up and down dynamically. Client microservices use <strong>Ribbon</strong> for client-side load balancing, caching instance lists locally to achieve sub-millisecond routing across Netflix's streaming cluster.</p>
+      </div>
+
+      ${navButtons(this)}`;
+    requestAnimationFrame(() => initSDCanvas());
+  }
+},
+
 // ── MESSAGE QUEUES ─────────────────────────────────────────────
 "message-queues": {
   title: "Message Queues",
   badge: "Architecture", badgeClass: "badge-architecture",
   subtitle: "A Message Queue is a system where one service puts a message into a queue and another service processes it later — enabling async, decoupled communication.",
-  prev: "api-gateway", next: "event-driven",
+  prev: "service-discovery", next: "event-driven",
   render(c) {
     c.innerHTML = `
       ${hero(this)}

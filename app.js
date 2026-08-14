@@ -81,6 +81,9 @@ function loadTopic(id) {
   }
 
   currentTopic = id;
+  if (window.location.hash !== '#' + id) {
+    history.pushState(null, '', '#' + id);
+  }
   visited.add(id);
   localStorage.setItem('visited', JSON.stringify([...visited]));
 
@@ -114,7 +117,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sidebar').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('sidebar').classList.remove('open');
   });
-  loadTopic('intro');
+
+  window.addEventListener('popstate', () => {
+    const hash = window.location.hash.slice(1);
+    if (hash && TOPICS[hash]) loadTopic(hash);
+  });
+
+  const initHash = window.location.hash.slice(1);
+  if (initHash && TOPICS[initHash]) {
+    loadTopic(initHash);
+  } else {
+    loadTopic('intro');
+  }
 });
 
 // ============================================================
